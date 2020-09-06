@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import filedialog
+import math
 import json
 
 
@@ -113,7 +114,9 @@ class Form(Machine):
             matrix[row] = {}
             for col in range(circles_len):
                 # check if line exists between the two circles
-                matrix[row][col] = 1 if row != col and self.isConnected(self.circles[row], self.circles[col]) else 0
+                connected = self.isConnected(self.circles[row], self.circles[col], withDistance=True)
+                linked = True if row != col and connected['connected'] else False
+                matrix[row][col] = {'linked': linked, 'distance': connected['distance']}
         return matrix
 
     def BFSShortestPath(self, matrix, start, target):
@@ -128,7 +131,7 @@ class Form(Machine):
                 continue # skip if path already visited
             cols = matrix[row] # get all the columns
             for col in cols:
-                if cols[col] != 1: # skip if matrix is not 1
+                if not cols[col]['linked']: # skip if matrix is not 1
                     continue
                 rows = list(path)
                 rows.append(col)
@@ -138,7 +141,9 @@ class Form(Machine):
             visited.append(row) # set this row to visited
         return False
 
-    def isConnected(self, circle, circle2, returnIndex=False):
+    def isConnected(self, circle, circle2, returnIndex=False, withDistance=False):
+        distance = None
+        connected = False
         for index, line in enumerate(self.lines):
             x1 = line.point.x
             y1 = line.point.y
@@ -153,8 +158,10 @@ class Form(Machine):
             # check if right side of the line is within the second circle
             right_circle2 = True if circle2.point.x < x2 and x2 < circle2.point2.x and circle2.point.y < y2 and y2 < circle2.point2.y else False
             if (left_circle or right_circle) and (left_circle2 or right_circle2):
-                return True if not returnIndex else index
-        return False
+                connected = True if not returnIndex else index
+                distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                break
+        return {'connected': connected, 'distance': distance} if withDistance else connected
 
     def searchBlind(self):
         start = self.selections[0]
