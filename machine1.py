@@ -1,7 +1,7 @@
+from cmath import sqrt
+import json
 from tkinter import *
 from tkinter import filedialog
-import math
-import json
 
 
 class Machine:
@@ -31,7 +31,11 @@ class Line(Machine):
     def __init__(self, canvas, tag, x1, y1, x2, y2, color, width=3):
         self.point = Point(x1, y1)
         self.point2 = Point(x2, y2)
+        self.distance = round(sqrt((x2 - x1)**2 + (y2 - y1)**2).real)
         self.shape = canvas.create_line(self.point.x, self.point.y, self.point2.x, self.point2.y, fill=color, width=width, tags=tag)
+        px = ((self.point.x + self.point2.x) / 2)
+        py = ((self.point.y + self.point2.y) / 2)
+        self.text = canvas.create_text(px, py, text=self.distance, font='Verdana 14 italic', fill='green') # create label distance
         self.canvas = canvas
 
     def toJSON(self):
@@ -98,13 +102,28 @@ class Form(Machine):
     def drawLine(self):
         circle = self.circles[self.selections[0]]
         circle2 = self.circles[self.selections[1]]
+        self.clearSelections()
         center_x1 = circle.point.x + ((circle.point2.x - circle.point.x) / 2);
         center_y1 = circle.point.y + ((circle.point2.y - circle.point.y) / 2);
         center_x2 = circle2.point.x + ((circle2.point2.x - circle2.point.x) / 2);
         center_y2 = circle2.point.y + ((circle2.point2.y - circle2.point.y) / 2);
+        # check if line already exists
+        p1 = Point(center_x1, center_y1)
+        p2 = Point(center_x2, center_y2)
+        line_exists = False
+        for line in self.lines:
+            # check if p1 is in line.point
+            p1p1 = (p1.x == line.point.x and p1.y == line.point.y) # check if p1 is in line.point
+            p1p2 = (p1.x == line.point2.x and p1.y == line.point2.y) # check if p1 is in line.point2
+            p2p1 = (p2.x == line.point.x and p2.y == line.point.y) # check if p2 is in line.point
+            p2p2 = (p2.x == line.point2.x and p2.y == line.point2.y) # check if p2 is in line.point2
+            if (p1p1 or p1p2) and (p2p1 or p2p2):
+                line_exists = True
+                break
+        if line_exists:
+            return # line already exists
         line = Line(self.canvas, 'line{}'.format(len(self.lines)), center_x1, center_y1, center_x2, center_y2, 'black')
         self.lines.append(line)
-        self.clearSelections()
 
     def generateAdjacencyMatrix(self):
         matrix = {}
@@ -119,8 +138,8 @@ class Form(Machine):
                 matrix[row][col] = {'linked': linked, 'distance': connected['distance']}
         return matrix
 
-    def BFSShortestPath(self, matrix, start, target):
-        if start == target:
+    def BFSShortestPath(self, matrix, start, goal):
+        if start == goal:
             return []
         visited = []
         queue = [[start]]
@@ -136,7 +155,7 @@ class Form(Machine):
                 rows = list(path)
                 rows.append(col)
                 queue.append(rows)
-                if col == target: # found it
+                if col == goal: # found it
                     return rows
             visited.append(row) # set this row to visited
         return False
@@ -159,16 +178,17 @@ class Form(Machine):
             right_circle2 = True if circle2.point.x < x2 and x2 < circle2.point2.x and circle2.point.y < y2 and y2 < circle2.point2.y else False
             if (left_circle or right_circle) and (left_circle2 or right_circle2):
                 connected = True if not returnIndex else index
-                distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                distance = sqrt((x2 - x1)**2 + (y2 - y1)**2)
                 break
         return {'connected': connected, 'distance': distance} if withDistance else connected
 
     def searchBlind(self):
         start = self.selections[0]
-        target = self.selections[1]
+        goal = self.selections[1]
         matrix = self.generateAdjacencyMatrix()
-        print('Searching from {} to {}'.format(start, target))
-        search = self.BFSShortestPath(matrix, start, target)
+        print('Matrix: ', matrix)
+        print('Searching from {} to {}'.format(start, goal))
+        search = self.BFSShortestPath(matrix, start, goal)
         print('SEARCH RESULTS: ', search)
         # change line colors
         circle = None
@@ -247,8 +267,8 @@ class Form(Machine):
         self.menubar.add_cascade(label='File', menu=filemenu)
         # Shape menu
         shapemenu = Menu(self.menubar, tearoff=0)
-        shapemenu.add_command(label='Circle', command=self.doShapeCircle)
-        shapemenu.add_command(label='Line', command=self.doShapeLine)
+        shapemenu.add_command(label='Draw Point', command=self.doShapeCircle)
+        shapemenu.add_command(label='Draw Line', command=self.doShapeLine)
         self.menubar.add_cascade(label='Shape', menu=shapemenu)
         # Search menu
         searchmenu = Menu(self.menubar, tearoff=0)
