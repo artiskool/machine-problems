@@ -1,7 +1,9 @@
 from cmath import sqrt
+from time import sleep
 import json
 from tkinter import *
 from tkinter import filedialog
+from PIL import Image, ImageTk
 
 
 class Machine:
@@ -33,9 +35,9 @@ class Line(Machine):
         self.point2 = Point(x2, y2)
         self.distance = round(sqrt((x2 - x1)**2 + (y2 - y1)**2).real)
         self.shape = canvas.create_line(self.point.x, self.point.y, self.point2.x, self.point2.y, fill=color, width=width, tags=tag)
-        px = ((self.point.x + self.point2.x) / 2)
-        py = ((self.point.y + self.point2.y) / 2)
-        self.text = canvas.create_text(px, py, text=self.distance, font='Verdana 14 italic', fill='green') # create label distance
+        px = (self.point.x + self.point2.x) / 2
+        py = (self.point.y + self.point2.y) / 2
+        self.text = canvas.create_text(px, py, text=self.distance, font='Verdana 14 italic', fill='red') # create label distance
         self.canvas = canvas
 
     def toJSON(self):
@@ -76,7 +78,14 @@ class Form(Machine):
         self.tk.title(title)
         self.canvas.pack()
         self.canvas.bind('<ButtonRelease-1>', self.createLine)
+        # START loading background image and default endpoints
+        self.backgroundImage = ImageTk.PhotoImage(Image.open('./data/bantayan-island.png'))
+        self.canvas.config(height=self.backgroundImage.height(), width=self.backgroundImage.width())
+        self.background = self.canvas.create_image(self.backgroundImage.width() / 2, self.backgroundImage.height() / 2, image=self.backgroundImage, anchor=CENTER)
+        self.redraw('./data/bantayan-island.json')
+        # END loading background image and default endpoints
         self.buildMenu()
+        self.visitedNodes = {}
 
     def start(self):
         self.tk.mainloop()
@@ -133,9 +142,9 @@ class Form(Machine):
             matrix[row] = {}
             for col in range(circles_len):
                 # check if line exists between the two circles
-                connected = self.isConnected(self.circles[row], self.circles[col], withDistance=True)
+                connected = self.isConnected(self.circles[row], self.circles[col], returnLineConnected=True)
                 linked = True if row != col and connected['connected'] else False
-                matrix[row][col] = {'linked': linked, 'distance': connected['distance']}
+                matrix[row][col] = {'linked': linked, 'circle1': row, 'circle2': col, 'line': connected['line']}
         return matrix
 
     def BFSShortestPath(self, matrix, start, goal):
@@ -147,22 +156,35 @@ class Form(Machine):
             path = queue.pop(0) # get the first path from the queue and remove it
             row = path[-1] # get the last row from the path
             if row in visited: # check if path has already been visited
+                # TODO: probably animate visited nodes???
                 continue # skip if path already visited
             cols = matrix[row] # get all the columns
             for col in cols:
                 if not cols[col]['linked']: # skip if matrix is not 1
                     continue
+                # do the dance
+                circle1 = 'circle{}'.format(cols[col]['circle1'])
+                circle2 = 'circle{}'.format(cols[col]['circle2'])
+                line = 'line{}'.format(cols[col]['line'])
+                self.visitedNodes[circle1] = {'from': 'blue', 'to': 'red'}
+                self.visitedNodes[circle2] = {'from': 'blue', 'to': 'red'}
+                self.visitedNodes[line] = {'from': 'blue', 'to': 'black'}
+                self.canvas.itemconfig(circle1, fill='blue')
+                self.canvas.itemconfig(circle2, fill='blue')
+                self.canvas.itemconfig(line, fill='blue')
+                self.tk.update()
                 rows = list(path)
                 rows.append(col)
                 queue.append(rows)
+                sleep(2) # delay
                 if col == goal: # found it
                     return rows
             visited.append(row) # set this row to visited
         return False
 
-    def isConnected(self, circle, circle2, returnIndex=False, withDistance=False):
-        distance = None
+    def isConnected(self, circle, circle2, returnIndex=False, returnLineConnected=False):
         connected = False
+        lineConnected = None
         for index, line in enumerate(self.lines):
             x1 = line.point.x
             y1 = line.point.y
@@ -178,17 +200,20 @@ class Form(Machine):
             right_circle2 = True if circle2.point.x < x2 and x2 < circle2.point2.x and circle2.point.y < y2 and y2 < circle2.point2.y else False
             if (left_circle or right_circle) and (left_circle2 or right_circle2):
                 connected = True if not returnIndex else index
-                distance = sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                lineConnected = index
                 break
-        return {'connected': connected, 'distance': distance} if withDistance else connected
+        return {'connected': connected, 'line': lineConnected} if returnLineConnected else connected
 
     def searchBlind(self):
         start = self.selections[0]
         goal = self.selections[1]
         matrix = self.generateAdjacencyMatrix()
         print('Matrix: ', matrix)
-        print('Searching from {} to {}'.format(start, goal))
+        print('Searching from {} to {}'.format(start+1, goal+1))
+        self.visitedNodes = {}
         search = self.BFSShortestPath(matrix, start, goal)
+        for index in self.visitedNodes:
+            self.canvas.itemconfig(index, fill=self.visitedNodes[index]['to'])
         print('SEARCH RESULTS: ', search)
         # change line colors
         circle = None
@@ -208,10 +233,13 @@ class Form(Machine):
 
     def doFileOpen(self):
         filename = filedialog.askopenfilename(initialdir='/', title='Select json file', filetypes=(('json files', '*.json'),('all files', '*.*')))
+        self.doFileNew()
+        self.redraw(filename)
+        self.selectedMenu = self.MENU_FILE_OPEN = 2
+
+    def redraw(self, filename):
         contents = open(filename).read(999999999)
         objects = json.loads(contents)
-        self.doFileNew()
-        self.selectedMenu = self.MENU_FILE_OPEN = 2
         # draw canvas
         if objects['circles']:
             for index, circle in enumerate(objects['circles']):
