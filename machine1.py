@@ -155,6 +155,7 @@ class Form(Machine):
       return []
     visited = []
     queue = [[start]]
+    previousVisitedNode = None
     while queue:
       path = queue.pop(0) # get the first path from the queue and remove it
       row = path[-1] # get the last row from the path
@@ -169,12 +170,19 @@ class Form(Machine):
         node1 = 'node{}'.format(cols[col]['node1'])
         node2 = 'node{}'.format(cols[col]['node2'])
         edge = 'edge{}'.format(cols[col]['edge'])
-        self.visitedNodes[node1] = {'from': 'blue', 'to': 'red'}
-        self.visitedNodes[node2] = {'from': 'blue', 'to': 'red'}
-        self.visitedNodes[edge] = {'from': 'blue', 'to': 'black'}
-        self.canvas.itemconfig(node1, fill='blue')
-        self.canvas.itemconfig(node2, fill='blue')
-        self.canvas.itemconfig(edge, fill='blue')
+        if previousVisitedNode is None:
+          previousVisitedNode = {'node1': node1, 'node2': node2, 'edge': edge}
+        else: # revert to visited color
+          self.canvas.itemconfig(previousVisitedNode['node1'], fill='blue')
+          self.canvas.itemconfig(previousVisitedNode['node2'], fill='blue')
+          self.canvas.itemconfig(previousVisitedNode['edge'], fill='blue')
+          previousVisitedNode = {'node1': node1, 'node2': node2, 'edge': edge}
+        self.visitedNodes[node1] = {'from': 'yellow', 'to': 'red'}
+        self.visitedNodes[node2] = {'from': 'yellow', 'to': 'red'}
+        self.visitedNodes[edge] = {'from': 'yellow', 'to': 'black'}
+        self.canvas.itemconfig(node1, fill='yellow')
+        self.canvas.itemconfig(node2, fill='yellow')
+        self.canvas.itemconfig(edge, fill='yellow')
         self.tk.update()
         rows = list(path)
         rows.append(col)
