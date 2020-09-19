@@ -207,14 +207,14 @@ class Form(Machine):
         break
     return {'connected': connected, 'edge': edgeConnected} if returnEdgeConnected else connected
 
-  def searchBreadthFirst(self):
+  def searchGeneric(self, method):
     start = self.selections[0]
     goal = self.selections[1]
     matrix = self.generateAdjacencyMatrix()
     print('Matrix: ', matrix)
     print('Searching from {} to {}'.format(start+1, goal+1))
     self.visitedNodes = {}
-    search = self.BFSShortestPath(matrix, start, goal)
+    search = getattr(self, method)(matrix, start, goal)
     for index in self.visitedNodes:
         self.canvas.itemconfig(index, fill=self.visitedNodes[index]['to'])
     print('SEARCH RESULTS: ', search)
@@ -228,6 +228,9 @@ class Form(Machine):
       self.canvas.itemconfig('edge{}'.format(index), fill='green')
       node = self.nodes[x]
     self.clearSelections()
+
+  def searchBreadthFirst(self):
+    return self.searchGeneric('BFSShortestPath')
 
   def searchDepthFirst(self):
     self.selectedMenu = self.MENU_SEARCH_DEPTH_FIRST
