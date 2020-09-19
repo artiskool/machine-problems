@@ -1,5 +1,5 @@
 {
-    "circles": [
+    "nodes": [
         {
             "box": {
                 "bottom": 34.0,
@@ -113,7 +113,7 @@
             }
         }
     ],
-    "lines": [
+    "edges": [
         {
             "point": {
                 "x": 270.0,
