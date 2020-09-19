@@ -150,7 +150,7 @@ class Form(Machine):
         matrix[row][col] = {'linked': linked, 'node1': row, 'node2': col, 'edge': connected['edge']}
     return matrix
 
-  def BFSShortestPath(self, matrix, start, goal):
+  def UninformedBFS(self, matrix, start, goal):
     if start == goal:
       return []
     visited = []
@@ -230,23 +230,19 @@ class Form(Machine):
     self.clearSelections()
 
   def searchBreadthFirst(self):
-    return self.searchGeneric('BFSShortestPath')
+    return self.searchGeneric('UninformedBFS')
 
   def searchDepthFirst(self):
-    self.selectedMenu = self.MENU_SEARCH_DEPTH_FIRST
-    self.clearSelections()
+    return self.searchGeneric('UninformedDFS')
 
   def searchUniformCost(self):
-    self.selectedMenu = self.MENU_SEARCH_UNIFORM_COST
-    self.clearSelections()
+    return self.searchGeneric('UninformedUCS')
 
   def searchBestFirst(self):
-    self.selectedMenu = self.MENU_SEARCH_BEST_FIRST
-    self.clearSelections()
+    return self.searchGeneric('InformedBFS')
 
   def searchAStar(self):
-    self.selectedMenu = self.MENU_SEARCH_A_STAR
-    self.clearSelections()
+    return self.searchGeneric('InformedASS')
 
   def doFileNew(self):
     self.selectedMenu = self.MENU_FILE_NEW = 1
