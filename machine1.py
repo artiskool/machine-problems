@@ -150,14 +150,18 @@ class Form(Machine):
         matrix[row][col] = {'linked': linked, 'node1': row, 'node2': col, 'edge': connected['edge']}
     return matrix
 
-  def UninformedBFS(self, matrix, start, goal):
+  # Uninformed Search by either BFS (Simple Queue, FIFO) or DFS (Stack, LIFO)
+  def UninformedBDFS(self, matrix, start, goal, algo='BFS'):
     if start == goal:
       return []
     visited = []
     queue = [[start]]
     previousVisitedNode = None
     while queue:
-      path = queue.pop(0) # get the first path from the queue and remove it
+      if algo == 'BFS':
+        path = queue.pop(0) # get the first path from the queue and remove it
+      else:
+        path = queue.pop() # get the last path from the queue and remove it
       row = path[-1] # get the last row from the path
       if row in visited: # check if path has already been visited
         # TODO: probably animate visited nodes???
@@ -192,6 +196,14 @@ class Form(Machine):
           return rows
       visited.append(row) # set this row to visited
     return False
+
+  # Search by Simple Queue, FIFO
+  def UninformedBFS(self, matrix, start, goal):
+    return self.UninformedBDFS(matrix, start, goal)
+
+  # Search by Stack, LIFO
+  def UninformedDFS(self, matrix, start, goal):
+    return self.UninformedBDFS(matrix, start, goal, 'DFS')
 
   def isConnected(self, node, node2, returnIndex=False, returnEdgeConnected=False):
     connected = False
@@ -368,18 +380,30 @@ class Form(Machine):
           self.canvas.itemconfig('node{}'.format(index), fill='green')
           if len(self.selections) >= 2:
             self.drawEdge()
-    elif self.selectedMenu == self.MENU_SEARCH_BREADTH_FIRST:
+    elif self.selectedMenu == self.MENU_SEARCH_BREADTH_FIRST \
+      or self.selectedMenu == self.MENU_SEARCH_DEPTH_FIRST \
+      or self.selectedMenu == self.MENU_SEARCH_UNIFORM_COST \
+      or self.selectedMenu == self.MENU_SEARCH_BEST_FIRST \
+      or self.selectedMenu == self.MENU_SEARCH_A_STAR:
       # locate if clicked boundary within a node and turn it to green, otherwise do nothing
       for index, node in enumerate(self.nodes):
         if node.point.x < x and x < node.point2.x and node.point.y < y and y < node.point2.y:
           self.selections.append(index)
           self.canvas.itemconfig('node{}'.format(index), fill='green')
           if len(self.selections) >= 2:
-            self.searchBreadthFirst()
+            if self.selectedMenu == self.MENU_SEARCH_BREADTH_FIRST:
+              self.searchBreadthFirst()
+            elif self.selectedMenu == self.MENU_SEARCH_DEPTH_FIRST:
+              self.searchDepthFirst()
+            elif self.selectedMenu == self.MENU_SEARCH_UNIFORM_COST:
+              self.searchUniformCost()
+            elif self.selectedMenu == self.MENU_SEARCH_BEST_FIRST:
+              self.searchBestFirst()
+            elif self.selectedMenu == self.MENU_SEARCH_A_STAR:
+              self.searchAStar()
           else:
             # change all edge colors
             for index, edge in enumerate(self.edges):
               self.canvas.itemconfig('edge{}'.format(index), fill='black')
-
 
 Form().start()
