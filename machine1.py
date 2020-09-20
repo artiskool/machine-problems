@@ -96,6 +96,8 @@ class Form(Machine):
   SORT_QUEUE = 1
   SORT_STACK = 2
   SORT_PRIORITY_QUEUE = 3
+  SORT_PRIORITY_QUEUE_BFS = 4
+  SORT_PRIORITY_QUEUE_ASS = 5
 
   def __init__(self, title='Machine Problem #1', width=1024, height=768):
     self.reset()
@@ -117,6 +119,8 @@ class Form(Machine):
     self.buildMenu()
     self.visitedNodes = {}
     self.matrix = {}
+    self.startNode = None
+    self.goalNode = None
 
   def start(self):
     self.tk.mainloop()
@@ -179,29 +183,43 @@ class Form(Machine):
     return self.matrix
 
   # Search by Simple Queue, FIFO
-  def UninformedBFS(self, start, goal):
-    traversed = self.traverse(start, goal, self.SORT_QUEUE)
+  def UninformedBFS(self):
+    traversed = self.traverse(self.SORT_QUEUE)
     self.animate(traversed['list'], traversed['path'])
     return traversed['path']
 
   # Search by Stack, LIFO
-  def UninformedDFS(self, start, goal):
-    traversed = self.traverse(start, goal, self.SORT_STACK)
+  def UninformedDFS(self):
+    traversed = self.traverse(self.SORT_STACK)
     self.animate(traversed['list'], traversed['path'])
     return traversed['path']
 
-  def UninformedUCS(self, start, goal):
-    traversed = self.traverse(start, goal, self.SORT_PRIORITY_QUEUE)
+  def UninformedUCS(self):
+    traversed = self.traverse(self.SORT_PRIORITY_QUEUE)
     self.animate(traversed['list'], traversed['path'])
     return traversed['path']
 
-  def InformedBFS(self, start, goal):
-    pass
+  def InformedBFS(self):
+    traversed = self.traverse(self.SORT_PRIORITY_QUEUE_BFS)
+    self.animate(traversed['list'], traversed['path'])
+    return traversed['path']
 
-  def InformedASS(self, start, goal):
-    pass
+  def InformedASS(self):
+    traversed = self.traverse(self.SORT_PRIORITY_QUEUE_ASS)
+    self.animate(traversed['list'], traversed['path'])
+    return traversed['path']
 
-  def sortPriority(self, queue):
+  def calculateHeuristic(self, node):
+    start = self.nodes[node]
+    goal = self.nodes[self.goalNode]
+    point = start.point.x
+    # calculate using Manhattan Distance
+    heuristic = abs(start.point.x - goal.point.x) + abs(start.point.y - goal.point.y)
+    return heuristic
+
+  def sortPriority(self, queue, method=None):
+    if method is None:
+      method = self.SORT_PRIORITY_QUEUE
     distances = {}
     for key in range(len(queue)):
       values = queue[key]
@@ -220,13 +238,20 @@ class Form(Machine):
           edge = self.matrix[previousNode][value]['edge']
         distance += self.edges[edge].distance
         previousNode = value
-      distances[key] = distance
+      if method == self.SORT_PRIORITY_QUEUE_BFS:
+        distances[key] = self.calculateHeuristic(previousNode)
+      elif method == self.SORT_PRIORITY_QUEUE_ASS:
+        distances[key] = distance + self.calculateHeuristic(previousNode)
+      else: # self.SORT_PRIORITY_QUEUE
+        distances[key] = distance
     # now based on distances, we're going to sort the values
     sortedDistances = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])}
     sortedQueue = []
     for key, value in sortedDistances.items():
       sortedQueue.append(queue[key])
     print('QUEUE: ', queue, ' SORTED DISTANCES: ', sortedDistances, ' SORTED: ', sortedQueue)
+    # TODO: Priority queue for BFS
+    # TODO: Priority queue for ASS
     return sortedQueue
 
   def sortQueue(self, method, fringe, queue):
@@ -240,6 +265,12 @@ class Form(Machine):
       # do priority sort by distance
       # compute the distance of queue items
       queue = self.sortPriority(queue)
+    elif method == self.SORT_PRIORITY_QUEUE_BFS:
+      queue += fringe
+      queue = self.sortPriority(queue, method)
+    elif method == self.SORT_PRIORITY_QUEUE_ASS:
+      queue += fringe
+      queue = self.sortPriority(queue, method)
     return {'fringe': fringe, 'queue': queue}
 
   def animate(self, fringe, cols, previousVisitedNode):
@@ -264,10 +295,9 @@ class Form(Machine):
       self.tk.update()
     return previousVisitedNode
 
-  def genericTraversal(self, start, method=None):
+  def genericTraversal(self, method=None):
     visited = []
-    queue = [[start]]
-    #traversed = [[start]]
+    queue = [[self.startNode]]
     traversed = []
     stack = []
     matched = None
@@ -292,7 +322,7 @@ class Form(Machine):
         rows.append(col)
         fringe.append(rows)
       # sort the fringe
-      if method == self.SORT_PRIORITY_QUEUE:
+      if method == self.SORT_PRIORITY_QUEUE or method == self.SORT_PRIORITY_QUEUE_BFS or self.SORT_PRIORITY_QUEUE_ASS:
         sortedQueue = self.sortQueue(method, fringe, queue)
       else:
         sortedQueue = self.sortQueue(self.SORT_QUEUE, fringe, queue)
@@ -301,56 +331,86 @@ class Form(Machine):
       visited.append(row) # set this row to visited
     return stack + queue
 
-  def traverseBFS(self, start, goal):
-    nodes = self.genericTraversal(start)
+  def traverseBFS(self):
+    nodes = self.genericTraversal()
     path = None
     traversed = []
     for node in nodes:
       if len(node) < 2:
         continue
       traversed.append(node)
-      if node[0] == start and node[-1] == goal:
+      if node[0] == self.startNode and node[-1] == self.goalNode:
         path = node
         break
     return {'path': path, 'list': traversed}
 
-  def traverseDFS(self, start, goal):
-    nodes = self.genericTraversal(start, self.SORT_STACK)
+  def traverseDFS(self):
+    nodes = self.genericTraversal(self.SORT_STACK)
     path = None
     traversed = []
     for node in nodes:
       if len(node) < 2:
         continue
       traversed.append(node)
-      if node[0] == start and node[-1] == goal:
+      if node[0] == self.startNode and node[-1] == self.goalNode:
         path = node
         break
     return {'path': path, 'list': traversed}
 
-  def traverseUCS(self, start, goal):
-    nodes = self.genericTraversal(start, self.SORT_PRIORITY_QUEUE)
+  def traverseUCS(self):
+    nodes = self.genericTraversal(self.SORT_PRIORITY_QUEUE)
     path = None
     traversed = []
     for node in nodes:
       if len(node) < 2:
         continue
       traversed.append(node)
-      if node[0] == start and node[-1] == goal:
+      if node[0] == self.startNode and node[-1] == self.goalNode:
         path = node
         break
     return {'path': path, 'list': traversed}
 
-  def traverse(self, start, goal, method=None):
-    if start == goal:
+  def traverseGBFS(self):
+    nodes = self.genericTraversal(self.SORT_PRIORITY_QUEUE_BFS)
+    path = None
+    traversed = []
+    for node in nodes:
+      if len(node) < 2:
+        continue
+      traversed.append(node)
+      if node[0] == self.startNode and node[-1] == self.goalNode:
+        path = node
+        break
+    return {'path': path, 'list': traversed}
+
+  def traverseASS(self):
+    nodes = self.genericTraversal(self.SORT_PRIORITY_QUEUE_ASS)
+    path = None
+    traversed = []
+    for node in nodes:
+      if len(node) < 2:
+        continue
+      traversed.append(node)
+      if node[0] == self.startNode and node[-1] == self.goalNode:
+        path = node
+        break
+    return {'path': path, 'list': traversed}
+
+  def traverse(self, method=None):
+    if self.startNode == self.goalNode:
       return []
     if method is None:
       method = self.SORT_QUEUE
     if method == self.SORT_STACK:
-      return self.traverseDFS(start, goal)
+      return self.traverseDFS()
     elif method == self.SORT_PRIORITY_QUEUE:
-      return self.traverseUCS(start, goal)
+      return self.traverseUCS()
+    elif method == self.SORT_PRIORITY_QUEUE_BFS:
+      return self.traverseGBFS()
+    elif method == self.SORT_PRIORITY_QUEUE_ASS:
+      return self.traverseASS()
     else:
-      return self.traverseBFS(start, goal)
+      return self.traverseBFS()
 
   def animate(self, nodes, path):
     visited = None
@@ -404,13 +464,13 @@ class Form(Machine):
     return {'connected': connected, 'edge': edgeConnected} if returnEdgeConnected else connected
 
   def searchGeneric(self, method):
-    start = self.selections[0]
-    goal = self.selections[1]
+    self.startNode = self.selections[0]
+    self.goalNode = self.selections[1]
     self.generateAdjacencyMatrix()
     print('Matrix: ', self.matrix)
-    print('Searching from {} to {}'.format(start+1, goal+1))
+    print('Searching from {} to {}'.format(self.startNode+1, self.goalNode+1))
     self.visitedNodes = {}
-    search = getattr(self, method)(start, goal)
+    search = getattr(self, method)()
     for index in self.visitedNodes:
       self.canvas.itemconfig(index, fill=self.visitedNodes[index]['to'])
     #print('SEARCH RESULTS: ', search)
