@@ -178,66 +178,23 @@ class Form(Machine):
         self.matrix[row][col] = {'linked': linked, 'node1': row, 'node2': col, 'edge': connected['edge']}
     return self.matrix
 
-  # Uninformed Search by either BFS (Simple Queue, FIFO) or DFS (Stack, LIFO)
-  def UninformedBDFS(self, start, goal, algo='BFS'):
-    if start == goal:
-      return []
-    visited = []
-    queue = [[start]]
-    previousVisitedNode = None
-    while queue:
-      if algo == 'BFS':
-        path = queue.pop(0) # get the first path from the queue and remove it
-      else:
-        path = queue.pop() # get the last path from the queue and remove it
-      row = path[-1] # get the last row from the path
-      if row in visited: # check if path has already been visited
-        # TODO: probably animate visited nodes???
-        continue # skip if path already visited
-      cols = self.matrix[row] # get all the columns
-      for col in cols:
-        if not cols[col]['linked']: # skip if matrix is not 1
-          continue
-        # do the dance
-        node1 = 'node{}'.format(cols[col]['node1'])
-        node2 = 'node{}'.format(cols[col]['node2'])
-        edge = 'edge{}'.format(cols[col]['edge'])
-        if previousVisitedNode is None:
-          previousVisitedNode = {'node1': node1, 'node2': node2, 'edge': edge}
-        else: # revert to visited color
-          self.canvas.itemconfig(previousVisitedNode['node1'], fill='blue')
-          self.canvas.itemconfig(previousVisitedNode['node2'], fill='blue')
-          self.canvas.itemconfig(previousVisitedNode['edge'], fill='blue')
-          previousVisitedNode = {'node1': node1, 'node2': node2, 'edge': edge}
-        self.visitedNodes[node1] = {'from': 'yellow', 'to': 'red'}
-        self.visitedNodes[node2] = {'from': 'yellow', 'to': 'red'}
-        self.visitedNodes[edge] = {'from': 'yellow', 'to': 'black'}
-        self.canvas.itemconfig(node1, fill='yellow')
-        self.canvas.itemconfig(node2, fill='yellow')
-        self.canvas.itemconfig(edge, fill='yellow')
-        self.tk.update()
-        rows = list(path)
-        rows.append(col)
-        queue.append(rows)
-        sleep(2) # delay
-        if col == goal: # found it
-          return rows
-      visited.append(row) # set this row to visited
-    return False
-
   # Search by Simple Queue, FIFO
   def UninformedBFS(self, start, goal):
     traversed = self.traverse(start, goal, self.SORT_QUEUE)
     self.animate(traversed['list'], traversed['path'])
     return traversed['path']
-    #return self.UninformedBDFS(start, goal)
 
   # Search by Stack, LIFO
   def UninformedDFS(self, start, goal):
     traversed = self.traverse(start, goal, self.SORT_STACK)
     self.animate(traversed['list'], traversed['path'])
     return traversed['path']
-    #return self.UninformedBDFS(start, goal, 'DFS')
+
+  def InformedBFS(self, start, goal):
+    pass
+
+  def InformedASS(self, start, goal):
+    pass
 
   def sortPriority(self, queue):
     distances = {}
