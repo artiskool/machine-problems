@@ -97,7 +97,7 @@ class Form(Machine):
   SORT_STACK = 2
   SORT_PRIORITY_QUEUE = 3
 
-  def __init__(self, title='Machine Problem #1', width=800, height=600):
+  def __init__(self, title='Machine Problem #1', width=1024, height=768):
     self.reset()
     self.width = width
     self.height = height
@@ -276,6 +276,8 @@ class Form(Machine):
     elif method == self.SORT_PRIORITY_QUEUE:
       queue += fringe
       # do priority sort by distance
+      # compute the distance of queue items
+      queue = self.sortPriority(queue)
     return {'fringe': fringe, 'queue': queue}
 
   def animate(self, fringe, cols, previousVisitedNode):
@@ -328,7 +330,10 @@ class Form(Machine):
         rows.append(col)
         fringe.append(rows)
       # sort the fringe
-      sortedQueue = self.sortQueue(self.SORT_QUEUE, fringe, queue)
+      if method == self.SORT_PRIORITY_QUEUE:
+        sortedQueue = self.sortQueue(method, fringe, queue)
+      else:
+        sortedQueue = self.sortQueue(self.SORT_QUEUE, fringe, queue)
       queue = sortedQueue['queue']
       traversed += sortedQueue['fringe']
       visited.append(row) # set this row to visited
@@ -360,6 +365,19 @@ class Form(Machine):
         break
     return {'path': path, 'list': traversed}
 
+  def traverseUCS(self, start, goal):
+    nodes = self.genericTraversal(start, self.SORT_PRIORITY_QUEUE)
+    path = None
+    traversed = []
+    for node in nodes:
+      if len(node) < 2:
+        continue
+      traversed.append(node)
+      if node[0] == start and node[-1] == goal:
+        path = node
+        break
+    return {'path': path, 'list': traversed}
+
   def traverse(self, start, goal, method=None):
     if start == goal:
       return []
@@ -367,6 +385,8 @@ class Form(Machine):
       method = self.SORT_QUEUE
     if method == self.SORT_STACK:
       return self.traverseDFS(start, goal)
+    elif method == self.SORT_PRIORITY_QUEUE:
+      return self.traverseUCS(start, goal)
     else:
       return self.traverseBFS(start, goal)
 
