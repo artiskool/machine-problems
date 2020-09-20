@@ -9,6 +9,29 @@ from PIL import Image, ImageTk
 class Machine:
   DEFAULT_SIZE = 20
 
+class Vertex(Machine):
+  def __init__(self):
+    self.parent = None
+    self.children = []
+    self.value = None
+    self.label = None
+    self.distance = 0
+
+  def toJSONChildren(self):
+    children = []
+    for child in self.children:
+      children.append(child.toJSON())
+    return children
+
+  def toJSON(self):
+    return {
+      'parent': self.parent,
+      'children': self.toJSONChildren(),
+      'value': self.value,
+      'label': self.label,
+      'distance': self.distance
+    }
+
 class Point(Machine):
   def __init__(self, x, y):
     self.x = x
@@ -89,6 +112,7 @@ class Form(Machine):
     # END loading background image and default endpoints
     self.buildMenu()
     self.visitedNodes = {}
+    self.matrix = {}
 
   def start(self):
     self.tk.mainloop()
@@ -138,20 +162,20 @@ class Form(Machine):
     self.edges.append(edge)
 
   def generateAdjacencyMatrix(self):
-    matrix = {}
+    self.matrix = {}
     nodes_len = len(self.nodes)
     # initialize matrix
     for row in range(nodes_len):
-      matrix[row] = {}
+      self.matrix[row] = {}
       for col in range(nodes_len):
         # check if edge exists between the two nodes
         connected = self.isConnected(self.nodes[row], self.nodes[col], returnEdgeConnected=True)
         linked = True if row != col and connected['connected'] else False
-        matrix[row][col] = {'linked': linked, 'node1': row, 'node2': col, 'edge': connected['edge']}
-    return matrix
+        self.matrix[row][col] = {'linked': linked, 'node1': row, 'node2': col, 'edge': connected['edge']}
+    return self.matrix
 
   # Uninformed Search by either BFS (Simple Queue, FIFO) or DFS (Stack, LIFO)
-  def UninformedBDFS(self, matrix, start, goal, algo='BFS'):
+  def UninformedBDFS(self, start, goal, algo='BFS'):
     if start == goal:
       return []
     visited = []
@@ -166,7 +190,7 @@ class Form(Machine):
       if row in visited: # check if path has already been visited
         # TODO: probably animate visited nodes???
         continue # skip if path already visited
-      cols = matrix[row] # get all the columns
+      cols = self.matrix[row] # get all the columns
       for col in cols:
         if not cols[col]['linked']: # skip if matrix is not 1
           continue
@@ -198,12 +222,134 @@ class Form(Machine):
     return False
 
   # Search by Simple Queue, FIFO
-  def UninformedBFS(self, matrix, start, goal):
-    return self.UninformedBDFS(matrix, start, goal)
+  def UninformedBFS(self, start, goal):
+    return self.UninformedBDFS(start, goal)
 
   # Search by Stack, LIFO
-  def UninformedDFS(self, matrix, start, goal):
-    return self.UninformedBDFS(matrix, start, goal, 'DFS')
+  def UninformedDFS(self, start, goal):
+    return self.UninformedBDFS(start, goal, 'DFS')
+
+  def sortPriority(self, queue):
+    distances = {}
+    for key in range(len(queue)):
+      values = queue[key]
+      # compute the distance for all the values
+      distance = 0
+      previousNode = None
+      for value in values:
+        if previousNode is None:
+          previousNode = value
+          continue
+        # compute the distance
+        if value in self.matrix and previousNode in self.matrix[value]:
+          # use the distance
+          edge = self.matrix[value][previousNode]['edge']
+        else: # it the other way around
+          edge = self.matrix[previousNode][value]['edge']
+        distance += self.edges[edge].distance
+        previousNode = value
+      distances[key] = distance
+    # now based on distances, we're going to sort the values
+    sortedDistances = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])}
+    sortedQueue = []
+    for key, value in sortedDistances.items():
+      sortedQueue.append(queue[key])
+    print('QUEUE: ', queue, ' SORTED DISTANCES: ', sortedDistances, ' SORTED: ', sortedQueue)
+    return sortedQueue
+
+  def queue(self, fringe, queue):
+    return sorted(fringe, reverse=True)
+
+  def animate(self, fringe, cols, previousVisitedNode):
+    for key in fringe:
+      col = key[-1]
+      node1 = 'node{}'.format(cols[col]['node1'])
+      node2 = 'node{}'.format(cols[col]['node2'])
+      edge = 'edge{}'.format(cols[col]['edge'])
+      if previousVisitedNode is None:
+        previousVisitedNode = {'node1': node1, 'node2': node2, 'edge': edge}
+      else: # revert to visited color
+        self.canvas.itemconfig(previousVisitedNode['node1'], fill='blue')
+        self.canvas.itemconfig(previousVisitedNode['node2'], fill='blue')
+        self.canvas.itemconfig(previousVisitedNode['edge'], fill='blue')
+        previousVisitedNode = {'node1': node1, 'node2': node2, 'edge': edge}
+      self.visitedNodes[node1] = {'from': 'yellow', 'to': 'red'}
+      self.visitedNodes[node2] = {'from': 'yellow', 'to': 'red'}
+      self.visitedNodes[edge] = {'from': 'yellow', 'to': 'black'}
+      self.canvas.itemconfig(node1, fill='yellow')
+      self.canvas.itemconfig(node2, fill='yellow')
+      self.canvas.itemconfig(edge, fill='yellow')
+      self.tk.update()
+    return previousVisitedNode
+
+  def traverse(self, start, goal, method='queue'):
+    if start == goal:
+      return []
+    visited = []
+    queue = [[start]]
+    #traversed = [[start]]
+    traversed = []
+    # Start traversing
+    while queue:
+      path = queue.pop(0) # get the first path from the queue and remove it
+      row = path[-1] # get the last row from the path
+      if row in visited: # check if path has already been visited
+        continue # skip if path already visited
+      cols = self.matrix[row] # get all the columns
+      # open the fringe
+      fringe = []
+      for col in cols:
+        if not cols[col]['linked']: # skip if matrix is not 1
+          continue
+        # do the dance
+        rows = list(path)
+        rows.append(col)
+        fringe.append(rows)
+        if col == goal: # found it
+          fringe = getattr(self, method)(fringe, queue)
+          queue += fringe
+          traversed += fringe
+          print('TRAVERSED: ', traversed)
+          #print('ROWS: ', rows)
+          return {'path': rows, 'list': traversed}
+      # sort the fringe
+      fringe = getattr(self, method)(fringe, queue)
+      queue += fringe
+      traversed += fringe
+      visited.append(row) # set this row to visited
+    return {'path': False, 'list': traversed}
+
+  def animate(self, nodes, path):
+    visited = None
+    for node in nodes:
+      row = node[-2]
+      col = node[-1]
+      # do the dance
+      node1 = 'node{}'.format(self.matrix[row][col]['node1'])
+      node2 = 'node{}'.format(self.matrix[row][col]['node2'])
+      edge = 'edge{}'.format(self.matrix[row][col]['edge'])
+      if visited is None:
+        visited = {'node1': node1, 'node2': node2, 'edge': edge}
+      else: # revert to visited color
+        self.canvas.itemconfig(visited['node1'], fill='blue')
+        self.canvas.itemconfig(visited['node2'], fill='blue')
+        self.canvas.itemconfig(visited['edge'], fill='blue')
+        visited = {'node1': node1, 'node2': node2, 'edge': edge}
+      self.visitedNodes[node1] = {'from': 'yellow', 'to': 'red'}
+      self.visitedNodes[node2] = {'from': 'yellow', 'to': 'red'}
+      self.visitedNodes[edge] = {'from': 'yellow', 'to': 'black'}
+      self.canvas.itemconfig(node1, fill='yellow')
+      self.canvas.itemconfig(node2, fill='yellow')
+      self.canvas.itemconfig(edge, fill='yellow')
+      self.tk.update()
+      sleep(2) # delay
+      if node == path:
+        break
+
+  def UninformedUCS(self, start, goal):
+    traversed = self.traverse(start, goal)
+    self.animate(traversed['list'], traversed['path'])
+    return traversed['path']
 
   def isConnected(self, node, node2, returnIndex=False, returnEdgeConnected=False):
     connected = False
@@ -230,23 +376,24 @@ class Form(Machine):
   def searchGeneric(self, method):
     start = self.selections[0]
     goal = self.selections[1]
-    matrix = self.generateAdjacencyMatrix()
-    print('Matrix: ', matrix)
-    print('Searching from {} to {}'.format(start+1, goal+1))
+    self.generateAdjacencyMatrix()
+    #print('Matrix: ', matrix)
+    #print('Searching from {} to {}'.format(start+1, goal+1))
     self.visitedNodes = {}
-    search = getattr(self, method)(matrix, start, goal)
+    search = getattr(self, method)(start, goal)
     for index in self.visitedNodes:
-        self.canvas.itemconfig(index, fill=self.visitedNodes[index]['to'])
-    print('SEARCH RESULTS: ', search)
+      self.canvas.itemconfig(index, fill=self.visitedNodes[index]['to'])
+    #print('SEARCH RESULTS: ', search)
     # change edge colors
-    node = None
-    for x in search:
-      if node is None:
+    if search is not False:
+      node = None
+      for x in search:
+        if node is None:
+          node = self.nodes[x]
+          continue
+        index = self.isConnected(node, self.nodes[x], True)
+        self.canvas.itemconfig('edge{}'.format(index), fill='green')
         node = self.nodes[x]
-        continue
-      index = self.isConnected(node, self.nodes[x], True)
-      self.canvas.itemconfig('edge{}'.format(index), fill='green')
-      node = self.nodes[x]
     self.clearSelections()
 
   def searchBreadthFirst(self):
