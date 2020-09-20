@@ -190,6 +190,11 @@ class Form(Machine):
     self.animate(traversed['list'], traversed['path'])
     return traversed['path']
 
+  def UninformedUCS(self, start, goal):
+    traversed = self.traverse(start, goal, self.SORT_PRIORITY_QUEUE)
+    self.animate(traversed['list'], traversed['path'])
+    return traversed['path']
+
   def InformedBFS(self, start, goal):
     pass
 
@@ -375,11 +380,6 @@ class Form(Machine):
       sleep(2) # delay
       if node == path:
         break
-
-  def UninformedUCS(self, start, goal):
-    traversed = self.traverse(start, goal, self.SORT_PRIORITY_QUEUE)
-    self.animate(traversed['list'], traversed['path'])
-    return traversed['path']
 
   def isConnected(self, node, node2, returnIndex=False, returnEdgeConnected=False):
     connected = False
