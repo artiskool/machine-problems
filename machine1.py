@@ -479,9 +479,15 @@ class Form(Machine):
     return self.searchGeneric('UninformedUCS')
 
   def searchBestFirst(self):
+    # NOTE: heuristic never overestimate the cost from node to goal
+    # similar to Uniform Cost Search but only deals with heuristic value
+    # heuristic value = abs (current_node.x – goal.x) + abs (current_node.y – goal.y) - Manhattan Distance
     return self.searchGeneric('InformedBFS')
 
   def searchAStar(self):
+    # NOTE: heuristic never overestimate the cost from node to goal
+    # similar to Uniform Cost Search + heuristic value
+    # A score = sum of cost of path from start node + heuristic value of node
     return self.searchGeneric('InformedASS')
 
   def doFileNew(self):
