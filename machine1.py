@@ -105,16 +105,24 @@ class Form(Machine):
     self.height = height
     self.selectedMenu = None
     self.tk = Tk()
+    #self.tk.resizable(False, False)
     self.canvas = Canvas(self.tk, height=self.height, width=self.width)
-    #self.canvas.grid(row=0, column=0)
+    #self.canvas2 = Canvas(self.tk, height=self.height/2, width=self.width/2)
     self.tk.title(title)
     self.canvas.pack()
+    #self.canvas.pack(expand = YES, fill = BOTH)
     self.canvas.bind('<ButtonRelease-1>', self.createEdge)
     # START loading background image and default endpoints
     self.backgroundImage = ImageTk.PhotoImage(Image.open('./data/bantayan-island.png'))
-    self.canvas.config(height=self.backgroundImage.height(), width=self.backgroundImage.width())
+    self.canvas.config(height=self.backgroundImage.height(), width=self.backgroundImage.width()*1.5)
     self.background = self.canvas.create_image(self.backgroundImage.width() / 2, self.backgroundImage.height() / 2, image=self.backgroundImage, anchor=CENTER)
     self.redraw('./data/bantayan-island.json')
+
+    self.summary = Listbox(self.canvas)
+    #bolded = font.Font(weight='bold') # will use the default font
+    #self.label.config(font=bolded)
+    self.summary.pack()
+    self.canvas.create_window((self.backgroundImage.width()*1.25)+2, self.backgroundImage.height()/2, window=self.summary, height=self.backgroundImage.height(), width=self.backgroundImage.width()*0.5)
     # END loading background image and default endpoints
     self.buildMenu()
     self.visitedNodes = {}
@@ -273,7 +281,7 @@ class Form(Machine):
       queue = self.sortPriority(queue, method)
     return {'fringe': fringe, 'queue': queue}
 
-  def animate(self, fringe, cols, previousVisitedNode):
+  def animation(self, fringe, cols, previousVisitedNode):
     for key in fringe:
       col = key[-1]
       node1 = 'node{}'.format(cols[col]['node1'])
@@ -332,7 +340,7 @@ class Form(Machine):
     return stack + queue
 
   def traverseBFS(self):
-    nodes = self.genericTraversal()
+    nodes = self.genericTraversal(self.SORT_QUEUE)
     path = None
     traversed = []
     for node in nodes:
@@ -423,6 +431,7 @@ class Form(Machine):
       node1 = 'node{}'.format(self.matrix[row][col]['node1'])
       node2 = 'node{}'.format(self.matrix[row][col]['node2'])
       edge = 'edge{}'.format(self.matrix[row][col]['edge'])
+      self.summary.insert(END, 'Visiting {} -> {}'.format(self.matrix[row][col]['node1']+1, self.matrix[row][col]['node2']+1))
       if visited is None:
         visited = {'node1': node1, 'node2': node2, 'edge': edge}
       else: # revert to visited color
@@ -440,6 +449,7 @@ class Form(Machine):
       sleep(2) # delay
       if node == path:
         break
+    self.summary.insert(END, 'PATH: {}'.format(' -> '.join(str(x+1) for x in path)))
 
   def isConnected(self, node, node2, returnIndex=False, returnEdgeConnected=False):
     connected = False
@@ -466,6 +476,7 @@ class Form(Machine):
   def searchGeneric(self, method):
     self.startNode = self.selections[0]
     self.goalNode = self.selections[1]
+    self.summary.insert(END, 'Start: {} Goal: {}'.format(self.startNode+1, self.goalNode+1))
     self.generateAdjacencyMatrix()
     print('Matrix: ', self.matrix)
     print('Searching from {} to {}'.format(self.startNode+1, self.goalNode+1))
@@ -475,7 +486,7 @@ class Form(Machine):
       self.canvas.itemconfig(index, fill=self.visitedNodes[index]['to'])
     #print('SEARCH RESULTS: ', search)
     # change edge colors
-    if search is not False:
+    if search is not False and search is not None:
       node = None
       for x in search:
         if node is None:
@@ -487,6 +498,8 @@ class Form(Machine):
     self.clearSelections()
 
   def searchBreadthFirst(self):
+    self.summary.delete(0, END)
+    self.summary.insert(END, '*** BREADTH FIRST SEARCH ***')
     return self.searchGeneric('UninformedBFS')
 
   def searchDepthFirst(self):
