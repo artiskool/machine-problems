@@ -60,7 +60,7 @@ class Edge(Machine):
     self.graph = canvas.create_line(self.point.x, self.point.y, self.point2.x, self.point2.y, fill=color, width=width, tags=tag)
     px = (self.point.x + self.point2.x) / 2
     py = (self.point.y + self.point2.y) / 2
-    self.text = canvas.create_text(px, py, text=self.distance, font='Verdana 14 italic', fill='red') # create label distance
+    self.text = canvas.create_text(px, py, text=self.distance, font={'Consolas', 14, 'italic'}, fill='red') # create label distance
     self.canvas = canvas
 
   def toJSON(self):
@@ -73,8 +73,9 @@ class Node(Machine):
     self.point2 = Point(x + self.DEFAULT_SIZE, y + self.DEFAULT_SIZE)
     self.box = Box(self.point.x, self.point.y, self.point.x + self.DEFAULT_SIZE, self.point.y + self.DEFAULT_SIZE)
     self.graph = canvas.create_oval(self.box.left, self.box.top, self.box.right, self.box.bottom, fill=color, tags=tag)
-    self.text = canvas.create_text(self.point.x, self.point.y, text=label, font='Verdana 10 italic')
+    self.text = canvas.create_text(self.point.x, self.point.y, text=label, font={'Consolas', 10, 'italic'})
     self.heuristic = None
+    self.heuristicValue = None
     self.canvas = canvas
 
   def toJSON(self):
@@ -106,6 +107,7 @@ class Form(Machine):
     self.height = height
     self.selectedMenu = None
     self.tk = Tk()
+    #m_len = self.font.measure('m')
     #self.tk.resizable(False, False)
     self.canvas = Canvas(self.tk, height=self.height, width=self.width)
     #self.canvas2 = Canvas(self.tk, height=self.height/2, width=self.width/2)
@@ -304,6 +306,67 @@ class Form(Machine):
       self.tk.update()
     return previousVisitedNode
 
+  def showAdjacencyMatrix(self, method=None):
+    nodeLen = len(self.nodes)
+    rows = []
+    headers = [' ']
+    for row in range(nodeLen):
+      rowName = str(row+1)
+      headers.append(rowName)
+      cells = [rowName]
+      for col in range(nodeLen):
+        cells.append('1' if self.matrix[row][col]['linked'] else '0')
+      rows.append(' | '.join(cells))
+    self.summary.insert(END, '') # create extra space
+    self.summary.insert(END, '=== ADJACENCY MATRIX ===')
+    self.summary.insert(END, ' | '.join(headers))
+    for row in rows:
+      self.summary.insert(END, row)
+    self.summary.insert(END, '') # create extra space
+    # Create Heuristic Summary
+    if method in [self.SORT_PRIORITY_QUEUE_BFS, self.SORT_PRIORITY_QUEUE_ASS]:
+      headers = ['Node', 'Heuristic']
+      rows = []
+      for row in range(nodeLen):
+        header = str(row+1)
+        cell = str(self.nodes[row].heuristicValue)
+        lenHeader = len(header)
+        lenCell = len(cell)
+        maxLen = lenCell if lenCell > lenHeader else lenHeader
+        format = '{:<' + str(maxLen) + '}'
+        rows.append(' | '.join([format.format(header), format.format(cell)]))
+      self.summary.insert(END, '') # create extra space
+      self.summary.insert(END, '=== HEURISTIC VALUES ===')
+      self.summary.insert(END, ' | '.join(headers))
+      for row in rows:
+        self.summary.insert(END, row)
+      self.summary.insert(END, '') # create extra space
+    # Create Distance Summary
+    if method == self.SORT_PRIORITY_QUEUE_ASS: # create distance
+      headers = ['Nodes', 'Distance']
+      rows = []
+      for row in range(nodeLen):
+        for col in range(nodeLen):
+          if (row == col):
+            continue
+          header = '{} -> {}'.format(row+1, col+1)
+          edge = self.matrix[row][col]['edge']
+          if edge is None:
+            continue
+          distance = self.edges[edge].distance
+          cell = str(distance)
+          lenHeader = len(header)
+          lenCell = len(cell)
+          maxLen = lenCell if lenCell > lenHeader else lenHeader
+          format = '{:<' + str(maxLen) + '}'
+          rows.append(' | '.join([format.format(header), format.format(cell)]))
+      self.summary.insert(END, '') # create extra space
+      self.summary.insert(END, '=== DISTANCE VALUES ===')
+      self.summary.insert(END, ' | '.join(headers))
+      for row in rows:
+        self.summary.insert(END, row)
+      self.summary.insert(END, '') # create extra space
+
   def genericTraversal(self, method=None):
     # add/remove heuristic values
     for index in range(len(self.nodes)):
@@ -314,7 +377,9 @@ class Form(Machine):
       node = self.nodes[index]
       if method in [self.SORT_PRIORITY_QUEUE_BFS, self.SORT_PRIORITY_QUEUE_ASS]:
         heuristic = self.calculateHeuristic(index)
-        self.nodes[index].heuristic = self.canvas.create_text(node.point.x, node.point.y+30, text='h={}'.format(heuristic), font='Verdana 10 italic', fill="blue")
+        self.nodes[index].heuristicValue = heuristic
+        self.nodes[index].heuristic = self.canvas.create_text(node.point.x, node.point.y+30, text='h={}'.format(heuristic), font={'Consolas', 10, 'italic'}, fill='blue')
+    self.showAdjacencyMatrix(method)
     visited = []
     queue = [[self.startNode]]
     traversed = []
@@ -461,6 +526,18 @@ class Form(Machine):
       if node == path:
         break
     self.summary.insert(END, 'PATH: {}'.format(' -> '.join(str(x+1) for x in path)))
+    pathCost = 0
+    prev = None
+    for x in path:
+      if prev is None:
+        prev = x
+        continue
+      edge = self.matrix[prev][x]['edge']
+      prev = x
+      if edge is None:
+        continue
+      pathCost += self.edges[edge].distance
+    self.summary.insert(END, 'PATH COST: {}'.format(pathCost))
 
   def isConnected(self, node, node2, returnIndex=False, returnEdgeConnected=False):
     connected = False
