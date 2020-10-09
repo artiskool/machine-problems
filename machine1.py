@@ -74,6 +74,7 @@ class Node(Machine):
     self.box = Box(self.point.x, self.point.y, self.point.x + self.DEFAULT_SIZE, self.point.y + self.DEFAULT_SIZE)
     self.graph = canvas.create_oval(self.box.left, self.box.top, self.box.right, self.box.bottom, fill=color, tags=tag)
     self.text = canvas.create_text(self.point.x, self.point.y, text=label, font='Verdana 10 italic')
+    self.heuristic = None
     self.canvas = canvas
 
   def toJSON(self):
@@ -304,6 +305,16 @@ class Form(Machine):
     return previousVisitedNode
 
   def genericTraversal(self, method=None):
+    # add/remove heuristic values
+    for index in range(len(self.nodes)):
+      # clear the heuristic first
+      if self.nodes[index].heuristic is not None:
+        self.canvas.delete(self.nodes[index].heuristic)
+      self.nodes[index].heuristic = None
+      node = self.nodes[index]
+      if method in [self.SORT_PRIORITY_QUEUE_BFS, self.SORT_PRIORITY_QUEUE_ASS]:
+        heuristic = self.calculateHeuristic(index)
+        self.nodes[index].heuristic = self.canvas.create_text(node.point.x, node.point.y+30, text='h={}'.format(heuristic), font='Verdana 10 italic', fill="blue")
     visited = []
     queue = [[self.startNode]]
     traversed = []
@@ -330,7 +341,7 @@ class Form(Machine):
         rows.append(col)
         fringe.append(rows)
       # sort the fringe
-      if method == self.SORT_PRIORITY_QUEUE or method == self.SORT_PRIORITY_QUEUE_BFS or self.SORT_PRIORITY_QUEUE_ASS:
+      if method in [self.SORT_PRIORITY_QUEUE, self.SORT_PRIORITY_QUEUE_BFS, self.SORT_PRIORITY_QUEUE_ASS]:
         sortedQueue = self.sortQueue(method, fringe, queue)
       else:
         sortedQueue = self.sortQueue(self.SORT_QUEUE, fringe, queue)
@@ -503,18 +514,26 @@ class Form(Machine):
     return self.searchGeneric('UninformedBFS')
 
   def searchDepthFirst(self):
+    self.summary.delete(0, END)
+    self.summary.insert(END, '*** DEPTH FIRST SEARCH ***')
     return self.searchGeneric('UninformedDFS')
 
   def searchUniformCost(self):
+    self.summary.delete(0, END)
+    self.summary.insert(END, '*** UNIFORMED COST SEARCH ***')
     return self.searchGeneric('UninformedUCS')
 
   def searchBestFirst(self):
+    self.summary.delete(0, END)
+    self.summary.insert(END, '*** BEST FIRST SEARCH ***')
     # NOTE: heuristic never overestimate the cost from node to goal
     # similar to Uniform Cost Search but only deals with heuristic value
     # heuristic value = abs (current_node.x – goal.x) + abs (current_node.y – goal.y) - Manhattan Distance
     return self.searchGeneric('InformedBFS')
 
   def searchAStar(self):
+    self.summary.delete(0, END)
+    self.summary.insert(END, '*** A STAR SEARCH ***')
     # NOTE: heuristic never overestimate the cost from node to goal
     # similar to Uniform Cost Search + heuristic value
     # A score = sum of cost of path from start node + heuristic value of node
