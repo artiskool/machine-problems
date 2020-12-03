@@ -53,14 +53,15 @@ class Box(Machine):
 
 
 class Edge(Machine):
-  def __init__(self, canvas, tag, x1, y1, x2, y2, color, width=3):
+  def __init__(self, canvas, tag, x1, y1, x2, y2, color, width=3, with_text=True):
     self.point = Point(x1, y1)
     self.point2 = Point(x2, y2)
     self.distance = round(sqrt((x2 - x1)**2 + (y2 - y1)**2).real)
     self.graph = canvas.create_line(self.point.x, self.point.y, self.point2.x, self.point2.y, fill=color, width=width, tags=tag)
     px = (self.point.x + self.point2.x) / 2
     py = (self.point.y + self.point2.y) / 2
-    self.text = canvas.create_text(px, py, text=self.distance, font={'Consolas', 14, 'italic'}, fill='red') # create label distance
+    # create label distance
+    self.text = canvas.create_text(px, py, text=self.distance, font={'Consolas', 14, 'italic'}, fill='red') if with_text else None
     self.canvas = canvas
 
   def toJSON(self):
@@ -68,12 +69,12 @@ class Edge(Machine):
 
 
 class Node(Machine):
-  def __init__(self, canvas, tag, x, y, label, color='red'):
+  def __init__(self, canvas, tag, x, y, label, color='red', with_text=True):
     self.point = Point(x, y)
     self.point2 = Point(x + self.DEFAULT_SIZE, y + self.DEFAULT_SIZE)
     self.box = Box(self.point.x, self.point.y, self.point.x + self.DEFAULT_SIZE, self.point.y + self.DEFAULT_SIZE)
     self.graph = canvas.create_oval(self.box.left, self.box.top, self.box.right, self.box.bottom, fill=color, tags=tag)
-    self.text = canvas.create_text(self.point.x, self.point.y, text=label, font={'Consolas', 10, 'italic'})
+    self.text = canvas.create_text(self.point.x, self.point.y, text=label, font={'Consolas', 10, 'italic'}) #if with_text else None
     self.heuristic = None
     self.heuristicValue = None
     self.canvas = canvas
@@ -94,6 +95,7 @@ class Form(Machine):
   MENU_SEARCH_UNIFORM_COST = 9
   MENU_SEARCH_BEST_FIRST = 10
   MENU_SEARCH_A_STAR = 11
+  MENU_MAP_COLORING = 12
 
   SORT_QUEUE = 1
   SORT_STACK = 2
@@ -106,6 +108,7 @@ class Form(Machine):
     self.width = width
     self.height = height
     self.selectedMenu = None
+    self.selectedMainMenu = None
     self.tk = Tk()
     #m_len = self.font.measure('m')
     #self.tk.resizable(False, False)
@@ -177,7 +180,7 @@ class Form(Machine):
         break
     if edge_exists:
       return # edge already exists
-    edge = Edge(self.canvas, 'edge{}'.format(len(self.edges)), center_x1, center_y1, center_x2, center_y2, 'black')
+    edge = Edge(self.canvas, 'edge{}'.format(len(self.edges)), center_x1, center_y1, center_x2, center_y2, 'black', with_text=(self.selectedMainMenu != self.MENU_MAP_COLORING))
     self.edges.append(edge)
 
   def generateAdjacencyMatrix(self):
@@ -647,11 +650,11 @@ class Form(Machine):
     # draw canvas
     if objects['nodes']:
       for index, node in enumerate(objects['nodes']):
-        node = Node(self.canvas, 'node{}'.format(index) , node['point']['x'], node['point']['y'], index + 1, 'red')
+        node = Node(self.canvas, 'node{}'.format(index) , node['point']['x'], node['point']['y'], index + 1, 'red', with_text=(self.selectedMainMenu != self.MENU_MAP_COLORING))
         self.nodes.append(node)
     if objects['edges']:
       for index, edge in enumerate(objects['edges']):
-        edge = Edge(self.canvas, 'edge{}'.format(len(self.edges)), edge['point']['x'], edge['point']['y'], edge['point2']['x'], edge['point2']['y'], 'black')
+        edge = Edge(self.canvas, 'edge{}'.format(len(self.edges)), edge['point']['x'], edge['point']['y'], edge['point2']['x'], edge['point2']['y'], 'black', with_text=(self.selectedMainMenu != self.MENU_MAP_COLORING))
         self.edges.append(edge)
 
   def doFileSave(self):
@@ -695,6 +698,86 @@ class Form(Machine):
     self.selectedMenu = self.MENU_SEARCH_A_STAR
     self.clearSelections()
 
+  def doMapSelect(self):
+    self.clearSelections()
+    self.selectedMainMenu = self.MENU_MAP_COLORING
+    print(self.selectedMainMenu)
+
+  def doMapColoring(self):
+    self.selectedMainMenu = None
+    self.summary.delete(0, END)
+    self.summary.insert(END, '*** MAP COLORING ***')
+    # perform coloring
+    # sort all the vertex with highest number of neighbors
+    self.generateAdjacencyMatrix()
+    print('Matrix: ', self.matrix)
+    method = None
+    self.showAdjacencyMatrix(method)
+    """
+    self.visitedNodes = {}
+
+    # add/remove heuristic values
+    for index in range(len(self.nodes)):
+      # clear the heuristic first
+      if self.nodes[index].heuristic is not None:
+        self.canvas.delete(self.nodes[index].heuristic)
+      self.nodes[index].heuristic = None
+      node = self.nodes[index]
+      if method in [self.SORT_PRIORITY_QUEUE_BFS, self.SORT_PRIORITY_QUEUE_ASS]:
+        heuristic = self.calculateHeuristic(index)
+        self.nodes[index].heuristicValue = heuristic
+        self.nodes[index].heuristic = self.canvas.create_text(node.point.x, node.point.y+30, text='h={}'.format(heuristic), font={'Consolas', 10, 'italic'}, fill='blue')
+    self.showAdjacencyMatrix(method)
+    visited = []
+    queue = [[self.startNode]]
+    traversed = []
+    stack = []
+    #matched = None
+    # Start traversing
+    while queue:
+      if method == self.SORT_STACK:
+        path = queue.pop() # get the last path from the queue and remove it
+      else: # Queue
+        path = queue.pop(0) # get the first path from the queue and remove it
+      stack.append(path)
+      row = path[-1] # get the last row from the path
+      if row in visited: # check if path has already been visited
+        continue # skip if path already visited
+      cols = self.matrix[row] # get all the columns
+      # open the fringe
+      fringe = []
+      for col in cols:
+        if not cols[col]['linked']: # skip if matrix is not 1
+          continue
+        # do the dance
+        rows = list(path)
+        rows.append(col)
+        fringe.append(rows)
+      # sort the fringe
+      if method in [self.SORT_PRIORITY_QUEUE, self.SORT_PRIORITY_QUEUE_BFS, self.SORT_PRIORITY_QUEUE_ASS]:
+        sortedQueue = self.sortQueue(method, fringe, queue)
+      else:
+        sortedQueue = self.sortQueue(self.SORT_QUEUE, fringe, queue)
+      queue = sortedQueue['queue']
+      traversed += sortedQueue['fringe']
+      visited.append(row) # set this row to visited
+    return stack + queue
+    for index in self.visitedNodes:
+      self.canvas.itemconfig(index, fill=self.visitedNodes[index]['to'])
+    #print('SEARCH RESULTS: ', search)
+    # change edge colors
+    if search is not False and search is not None:
+      node = None
+      for x in search:
+        if node is None:
+          node = self.nodes[x]
+          continue
+        index = self.isConnected(node, self.nodes[x], True)
+        self.canvas.itemconfig('edge{}'.format(index), fill='green')
+        node = self.nodes[x]
+    self.clearSelections()
+    """
+
   def buildMenu(self):
     self.menubar = Menu(self.tk)
     # File menu
@@ -725,6 +808,12 @@ class Form(Machine):
     searchmenu.add_cascade(label='Uninformed', menu=uninformed_search)
     searchmenu.add_cascade(label='Informed', menu=informed_search)
     self.menubar.add_cascade(label='Search', menu=searchmenu)
+    # map coloring
+    mapmenu = Menu(self.menubar)
+    mapmenu.add_command(label='Select', command=self.doMapSelect)
+    mapmenu.add_command(label='Run', command=self.doMapColoring)
+    self.menubar.add_cascade(label='Map Coloring', menu=mapmenu)
+
     self.tk.config(menu=self.menubar)
 
   def createEdge(self, event):
@@ -736,7 +825,7 @@ class Form(Machine):
     y = self.height - size if y > (self.height - size) else y
     y = size + 5 if y < size + 5 else y
     if self.selectedMenu == self.MENU_GRAPH_NODE:
-      node = Node(self.canvas, 'node{}'.format(len(self.nodes)) , x-size, y-size, len(self.nodes) + 1, 'red')
+      node = Node(self.canvas, 'node{}'.format(len(self.nodes)) , x-size, y-size, len(self.nodes) + 1, 'red', with_text=(self.selectedMainMenu != self.MENU_MAP_COLORING))
       self.nodes.append(node)
     elif self.selectedMenu == self.MENU_GRAPH_EDGE:
       # locate if clicked boundary within a node and turn it to green, otherwise do nothing
