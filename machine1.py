@@ -701,18 +701,50 @@ class Form(Machine):
   def doMapSelect(self):
     self.clearSelections()
     self.selectedMainMenu = self.MENU_MAP_COLORING
-    print(self.selectedMainMenu)
+
+  def backtrackMapColoring(self, assignment, csp):
+    # if assignment is complete then return assignment
+    # var <- SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)
+    # for each value in ORDER-DOMAIN-VALUES(var, assignment, csp) do
+    #   if value is consistent with assignment according to CONSTRAINT[csp] then
+    #     add { var = value } to assignment
+    #     result <- backtrackMapColoring(assignment, csp)
+    #     if result != failure then return result
+    #     remove { var = value } from assignment
+    # return failure
+
+    # if assignment is complete then return assignment
+    # var <- SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)
+    # for each value in ORDER-DOMAIN-VALUES(var, assignment, csp) do
+    #   check if value is does not have the same color
+    #     add { var = value } to assignment
+    #     result <- backtrackMapColoring(assignment, csp)
+    #     if result != failure then return result
+    #     remove { var = value } from assignment
+    # return failure
+    pass
 
   def doMapColoring(self):
     self.selectedMainMenu = None
     self.summary.delete(0, END)
     self.summary.insert(END, '*** MAP COLORING ***')
     # perform coloring
-    # sort all the vertex with highest number of neighbors
     self.generateAdjacencyMatrix()
     print('Matrix: ', self.matrix)
     method = None
     self.showAdjacencyMatrix(method)
+    # sort all the vertices with highest number of neighbors
+    nodeLen = len(self.nodes)
+    rows = {}
+    for row in range(nodeLen):
+      for col in range(nodeLen):
+        if row not in rows:
+          rows[row] = 0
+        rows[row] += 1 if self.matrix[row][col]['linked'] else 0
+    print(rows)
+    #for row in rows:
+    #  self.summary.insert(END, row)
+
     """
     self.visitedNodes = {}
 
