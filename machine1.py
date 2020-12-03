@@ -101,7 +101,7 @@ class Form(Machine):
   SORT_PRIORITY_QUEUE_BFS = 4
   SORT_PRIORITY_QUEUE_ASS = 5
 
-  def __init__(self, title='Machine Problem #1', width=1024, height=768):
+  def __init__(self, title='Machine Problems', width=1024, height=768):
     self.reset()
     self.width = width
     self.height = height
@@ -158,10 +158,10 @@ class Form(Machine):
     node = self.nodes[self.selections[0]]
     node2 = self.nodes[self.selections[1]]
     self.clearSelections()
-    center_x1 = node.point.x + ((node.point2.x - node.point.x) / 2);
-    center_y1 = node.point.y + ((node.point2.y - node.point.y) / 2);
-    center_x2 = node2.point.x + ((node2.point2.x - node2.point.x) / 2);
-    center_y2 = node2.point.y + ((node2.point2.y - node2.point.y) / 2);
+    center_x1 = node.point.x + ((node.point2.x - node.point.x) / 2)
+    center_y1 = node.point.y + ((node.point2.y - node.point.y) / 2)
+    center_x2 = node2.point.x + ((node2.point2.x - node2.point.x) / 2)
+    center_y2 = node2.point.y + ((node2.point2.y - node2.point.y) / 2)
     # check if edge already exists
     p1 = Point(center_x1, center_y1)
     p2 = Point(center_x2, center_y2)
@@ -223,7 +223,7 @@ class Form(Machine):
   def calculateHeuristic(self, node):
     start = self.nodes[node]
     goal = self.nodes[self.goalNode]
-    point = start.point.x
+    #point = start.point.x
     # calculate using Manhattan Distance
     heuristic = abs(start.point.x - goal.point.x) + abs(start.point.y - goal.point.y)
     return heuristic
@@ -384,7 +384,7 @@ class Form(Machine):
     queue = [[self.startNode]]
     traversed = []
     stack = []
-    matched = None
+    #matched = None
     # Start traversing
     while queue:
       if method == self.SORT_STACK:
@@ -618,7 +618,21 @@ class Form(Machine):
 
   def doFileNew(self):
     self.selectedMenu = self.MENU_FILE_NEW = 1
-    self.canvas.delete('all')
+    #self.canvas.delete('all')
+    for index, node in enumerate(self.nodes):
+      self.canvas.delete('node{}'.format(index))
+      if node.heuristic is not None:
+        self.canvas.delete(node.heuristic)
+      if node.graph is not None:
+        self.canvas.delete(node.graph)
+      if node.text is not None:
+        self.canvas.delete(node.text)
+    for index, edge in enumerate(self.edges):
+      if edge.graph is not None:
+        self.canvas.delete(edge.graph)
+      if edge.text is not None:
+        self.canvas.delete(edge.text)
+      self.canvas.delete('edge{}'.format(index))
     self.reset()
 
   def doFileOpen(self):
@@ -755,7 +769,7 @@ class Form(Machine):
               self.searchAStar()
           else:
             # change all edge colors
-            for index, edge in enumerate(self.edges):
+            for index, in enumerate(self.edges):
               self.canvas.itemconfig('edge{}'.format(index), fill='black')
 
 Form().start()
