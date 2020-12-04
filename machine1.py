@@ -749,24 +749,6 @@ class Form(Machine):
       # remove { var = value } from assignment
       colors[vertex] = 0
 
-  """
-  def graphColoring(self, m):
-    colors = [0] * self.vertices
-    vertex = 0
-    if self.backtrackMapColoring(m, colors, vertex) == None:
-      self.summary.insert(END, "No solution! for {} color(s)".format(m))
-      return False
-    # Print the solution
-    self.summary.insert(END, "Assigned {} color(s):".format(m))
-    for color in colors:
-      self.summary.insert(END, self.colors[color-1])
-    nodeLen = len(self.nodes)
-    for index in range(nodeLen):
-      self.summary.insert(END, 'node{} = {}'.format(index+1, self.colors[colors[index]-1]))
-      #self.canvas.itemconfig('node{}'.format(index), fill=self.colors[colors[index]-1])
-    return True
-  """
-
   def doMapColoring(self, m):
     self.selectedMainMenu = None
     self.summary.delete(0, END)
@@ -792,7 +774,6 @@ class Form(Machine):
     #print(graph)
     self.graph = graph
     self.vertices = len(graph)
-    #self.graphColoring(m)
     colors = [0] * self.vertices
     vertex = 0
     if self.backtrackMapColoring(m, colors, vertex) == None:
