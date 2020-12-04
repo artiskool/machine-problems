@@ -716,7 +716,9 @@ class Form(Machine):
 
   vertices = 0
   graph = []
-  colors = ["orange", "maroon", "cyan", "gray", "brown", "purple"]
+  colors = ["maroon", "cyan", "gray", "orange", "brown", "purple"]
+  printed = [] # storage of summary report
+  blinked = []
 
   def hasConstraint(self, vertex, colors, color):
     for i in range(self.vertices):
@@ -726,28 +728,67 @@ class Form(Machine):
         return True
     return False
 
+  def changeNodeColor(self, nodeIndex, colors, ignoreBlink=False):
+    if nodeIndex in self.blinked and ignoreBlink is False:
+      return
+    #print(colors[nodeIndex])
+    self.blinked.append(nodeIndex)
+    if colors[nodeIndex] is not None: # color is assigned
+      color = self.colors[colors[nodeIndex]]
+      self.canvas.itemconfig('node{}'.format(nodeIndex), fill=color)
+      self.tk.update()
+      text = 'node{} = {}'.format(nodeIndex+1, self.colors[colors[nodeIndex]])
+      self.summary.insert(END, text)
+      return
+    color = self.canvas.itemcget('node{}'.format(nodeIndex), "fill")
+    color = "red" if color == "yellow" else "yellow"
+    #print("node: {} color: {}".format(nodeIndex, color))
+    self.canvas.itemconfig('node{}'.format(nodeIndex), fill=color)
+    self.tk.update()
+    self.tk.after(100, lambda: self.changeNodeColor(nodeIndex, colors, True))
+
   def backtrackMapColoring(self, m, colors, vertex):
     # if assignment is complete then return assignment
     if vertex == self.vertices:
       return True
     # var <- SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)
     # for each value in ORDER-DOMAIN-VALUES(var, assignment, csp) do
-    for color in range(1, m + 1):
+    #print(colors)
+    self.changeNodeColor(vertex, colors) # start blinking
+    #print("vertex: {}".format(vertex))
+    for color in range(m):
       # check if value is does not have the same color
-      self.canvas.itemconfig('node{}'.format(vertex), fill="yellow")
+      #self.canvas.itemconfig('node{}'.format(vertex), fill="yellow")
+      #self.tk.update()
+      #self.changeNodeColor(self.nodes[vertex])
+      sleep(1) # delay
       if self.hasConstraint(vertex, colors, color):
-        self.canvas.itemconfig('node{}'.format(vertex), fill="red")
         continue
+      #if colors[color] is not None:
+      #  self.canvas.itemconfig('node{}'.format(vertex), fill=self.colors[colors[color]])
+      #  self.tk.update()
       # add { var = value } to assignment
       colors[vertex] = color
+      # update node coloring
+      """
+      for index in range(len(colors)):
+        if colors[index] is None:
+          continue
+        text = 'node{} = {}'.format(index+1, self.colors[colors[index]])
+        if text not in self.printed:
+          self.printed.append(text)
+          self.summary.insert(END, text)
+        self.canvas.itemconfig('node{}'.format(index), fill=self.colors[colors[index]])
+        self.tk.update()
+      """
       # result <- backtrackMapColoring(assignment, csp)
       result = self.backtrackMapColoring(m, colors, vertex + 1)
       # if result != failure then return result
       if result == True:
-        self.canvas.itemconfig('node{}'.format(vertex), fill=self.colors[colors[color]-1])
         return True
       # remove { var = value } from assignment
-      colors[vertex] = 0
+      colors[vertex] = None
+    return False
 
   def doMapColoring(self, m):
     self.selectedMainMenu = None
@@ -760,101 +801,30 @@ class Form(Machine):
     self.showAdjacencyMatrix(method)
     # sort all the vertices with highest number of neighbors
     nodeLen = len(self.nodes)
-    rows = {}
     graph = []
     for row in range(nodeLen):
       item = []
       for col in range(nodeLen):
-        if row not in rows:
-          rows[row] = 0
-        rows[row] += 1 if self.matrix[row][col]['linked'] else 0
         item.append(1 if self.matrix[row][col]['linked'] else 0)
       graph.append(item)
-    #print(rows)
-    #print(graph)
-    self.graph = graph
     self.vertices = len(graph)
-    colors = [0] * self.vertices
-    vertex = 0
-    if self.backtrackMapColoring(m, colors, vertex) == None:
-      self.summary.insert(END, "No solution! for {} color(s)".format(m))
+    self.graph = graph
+    self.printed = []
+    self.blinked = []
+    colors = [None] * self.vertices
+    textColors = []
+    for color in range(m):
+      textColors.append("{}".format(self.colors[color]))
+    self.summary.insert(END, "Assigning {} color(s): [{}]".format(m, ", ".join(textColors)))
+    self.summary.insert(END, "")
+    result = self.backtrackMapColoring(m, colors, 0)
+    if result is False:
+      self.summary.insert(END, "No solution found!")
       return False
-    # Print the solution
-    self.summary.insert(END, "Assigned {} color(s):".format(m))
-    for color in colors:
-      self.summary.insert(END, self.colors[color-1])
-    nodeLen = len(self.nodes)
-    for index in range(nodeLen):
-      self.summary.insert(END, 'node{} = {}'.format(index+1, self.colors[colors[index]-1]))
-      self.canvas.itemconfig('node{}'.format(index), fill=self.colors[colors[index]-1])
+    self.summary.insert(END, "Assigned colors are the following:")
+    for color in set(colors):
+      self.summary.insert(END, "{}. {}".format(color+1,self.colors[color]))
     return True
-    #for row in rows:
-    #  self.summary.insert(END, row)
-
-    """
-    self.visitedNodes = {}
-
-    # add/remove heuristic values
-    for index in range(len(self.nodes)):
-      # clear the heuristic first
-      if self.nodes[index].heuristic is not None:
-        self.canvas.delete(self.nodes[index].heuristic)
-      self.nodes[index].heuristic = None
-      node = self.nodes[index]
-      if method in [self.SORT_PRIORITY_QUEUE_BFS, self.SORT_PRIORITY_QUEUE_ASS]:
-        heuristic = self.calculateHeuristic(index)
-        self.nodes[index].heuristicValue = heuristic
-        self.nodes[index].heuristic = self.canvas.create_text(node.point.x, node.point.y+30, text='h={}'.format(heuristic), font={'Consolas', 10, 'italic'}, fill='blue')
-    self.showAdjacencyMatrix(method)
-    visited = []
-    queue = [[self.startNode]]
-    traversed = []
-    stack = []
-    #matched = None
-    # Start traversing
-    while queue:
-      if method == self.SORT_STACK:
-        path = queue.pop() # get the last path from the queue and remove it
-      else: # Queue
-        path = queue.pop(0) # get the first path from the queue and remove it
-      stack.append(path)
-      row = path[-1] # get the last row from the path
-      if row in visited: # check if path has already been visited
-        continue # skip if path already visited
-      cols = self.matrix[row] # get all the columns
-      # open the fringe
-      fringe = []
-      for col in cols:
-        if not cols[col]['linked']: # skip if matrix is not 1
-          continue
-        # do the dance
-        rows = list(path)
-        rows.append(col)
-        fringe.append(rows)
-      # sort the fringe
-      if method in [self.SORT_PRIORITY_QUEUE, self.SORT_PRIORITY_QUEUE_BFS, self.SORT_PRIORITY_QUEUE_ASS]:
-        sortedQueue = self.sortQueue(method, fringe, queue)
-      else:
-        sortedQueue = self.sortQueue(self.SORT_QUEUE, fringe, queue)
-      queue = sortedQueue['queue']
-      traversed += sortedQueue['fringe']
-      visited.append(row) # set this row to visited
-    return stack + queue
-    for index in self.visitedNodes:
-      self.canvas.itemconfig(index, fill=self.visitedNodes[index]['to'])
-    #print('SEARCH RESULTS: ', search)
-    # change edge colors
-    if search is not False and search is not None:
-      node = None
-      for x in search:
-        if node is None:
-          node = self.nodes[x]
-          continue
-        index = self.isConnected(node, self.nodes[x], True)
-        self.canvas.itemconfig('edge{}'.format(index), fill='green')
-        node = self.nodes[x]
-    self.clearSelections()
-    """
 
   def buildMenu(self):
     self.menubar = Menu(self.tk)
