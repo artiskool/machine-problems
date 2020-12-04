@@ -702,18 +702,6 @@ class Form(Machine):
     self.clearSelections()
     self.selectedMainMenu = self.MENU_MAP_COLORING
 
-  def backtrackMapColoring1(self, assignment, csp):
-    # if assignment is complete then return assignment
-    # var <- SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)
-    # for each value in ORDER-DOMAIN-VALUES(var, assignment, csp) do
-    #   if value is consistent with assignment according to CONSTRAINT[csp] then
-    #     add { var = value } to assignment
-    #     result <- backtrackMapColoring(assignment, csp)
-    #     if result != failure then return result
-    #     remove { var = value } from assignment
-    # return failure
-    pass
-
   vertices = 0
   graph = []
   colors = ["maroon", "cyan", "gray", "orange", "brown", "purple"]
@@ -728,49 +716,22 @@ class Form(Machine):
         return True
     return False
 
-  def changeNodeColor(self, nodeIndex, colors, ignoreBlink=False):
-    if nodeIndex in self.blinked and ignoreBlink is False:
-      return
-    #print(colors[nodeIndex])
-    self.blinked.append(nodeIndex)
-    if colors[nodeIndex] is not None: # color is assigned
-      color = self.colors[colors[nodeIndex]]
-      self.canvas.itemconfig('node{}'.format(nodeIndex), fill=color)
-      self.tk.update()
-      text = 'node{} = {}'.format(nodeIndex+1, self.colors[colors[nodeIndex]])
-      self.summary.insert(END, text)
-      return
-    color = self.canvas.itemcget('node{}'.format(nodeIndex), "fill")
-    color = "red" if color == "yellow" else "yellow"
-    #print("node: {} color: {}".format(nodeIndex, color))
-    self.canvas.itemconfig('node{}'.format(nodeIndex), fill=color)
-    self.tk.update()
-    self.tk.after(100, lambda: self.changeNodeColor(nodeIndex, colors, True))
-
   def backtrackMapColoring(self, m, colors, vertex):
     # if assignment is complete then return assignment
     if vertex == self.vertices:
       return True
     # var <- SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)
     # for each value in ORDER-DOMAIN-VALUES(var, assignment, csp) do
-    #print(colors)
-    self.changeNodeColor(vertex, colors) # start blinking
-    #print("vertex: {}".format(vertex))
+    self.canvas.itemconfig('node{}'.format(vertex), fill="yellow")
+    self.tk.update()
     for color in range(m):
-      # check if value is does not have the same color
-      #self.canvas.itemconfig('node{}'.format(vertex), fill="yellow")
-      #self.tk.update()
-      #self.changeNodeColor(self.nodes[vertex])
       sleep(1) # delay
+      # check if value is does not have the same color
       if self.hasConstraint(vertex, colors, color):
         continue
-      #if colors[color] is not None:
-      #  self.canvas.itemconfig('node{}'.format(vertex), fill=self.colors[colors[color]])
-      #  self.tk.update()
       # add { var = value } to assignment
       colors[vertex] = color
       # update node coloring
-      """
       for index in range(len(colors)):
         if colors[index] is None:
           continue
@@ -780,7 +741,6 @@ class Form(Machine):
           self.summary.insert(END, text)
         self.canvas.itemconfig('node{}'.format(index), fill=self.colors[colors[index]])
         self.tk.update()
-      """
       # result <- backtrackMapColoring(assignment, csp)
       result = self.backtrackMapColoring(m, colors, vertex + 1)
       # if result != failure then return result
@@ -818,12 +778,14 @@ class Form(Machine):
     self.summary.insert(END, "Assigning {} color(s): [{}]".format(m, ", ".join(textColors)))
     self.summary.insert(END, "")
     result = self.backtrackMapColoring(m, colors, 0)
+    self.summary.insert(END, "")
     if result is False:
       self.summary.insert(END, "No solution found!")
       return False
-    self.summary.insert(END, "Assigned colors are the following:")
+    textColors = []
     for color in set(colors):
-      self.summary.insert(END, "{}. {}".format(color+1,self.colors[color]))
+      textColors.append("{}".format(self.colors[color]))
+    self.summary.insert(END, "Solution: [{}]".format(", ".join(textColors)))
     return True
 
   def buildMenu(self):
