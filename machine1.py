@@ -702,7 +702,7 @@ class Form(Machine):
     self.clearSelections()
     self.selectedMainMenu = self.MENU_MAP_COLORING
 
-  def backtrackMapColoring(self, assignment, csp):
+  def backtrackMapColoring1(self, assignment, csp):
     # if assignment is complete then return assignment
     # var <- SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)
     # for each value in ORDER-DOMAIN-VALUES(var, assignment, csp) do
@@ -712,36 +712,101 @@ class Form(Machine):
     #     if result != failure then return result
     #     remove { var = value } from assignment
     # return failure
-
-    # if assignment is complete then return assignment
-    # var <- SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)
-    # for each value in ORDER-DOMAIN-VALUES(var, assignment, csp) do
-    #   check if value is does not have the same color
-    #     add { var = value } to assignment
-    #     result <- backtrackMapColoring(assignment, csp)
-    #     if result != failure then return result
-    #     remove { var = value } from assignment
-    # return failure
     pass
 
-  def doMapColoring(self):
+  vertices = 0
+  graph = []
+  colors = ["orange", "maroon", "cyan", "gray", "brown", "purple"]
+
+  def hasConstraint(self, vertex, colors, color):
+    for i in range(self.vertices):
+      if self.graph[vertex][i] == 0:
+        continue # skip, only graph with linked
+      if colors[i] == color: # constraint found, color already assigned to one of its neighbors
+        return True
+    return False
+
+  def backtrackMapColoring(self, m, colors, vertex):
+    # if assignment is complete then return assignment
+    if vertex == self.vertices:
+      return True
+    # var <- SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)
+    # for each value in ORDER-DOMAIN-VALUES(var, assignment, csp) do
+    for color in range(1, m + 1):
+      # check if value is does not have the same color
+      self.canvas.itemconfig('node{}'.format(vertex), fill="yellow")
+      if self.hasConstraint(vertex, colors, color):
+        self.canvas.itemconfig('node{}'.format(vertex), fill="red")
+        continue
+      # add { var = value } to assignment
+      colors[vertex] = color
+      # result <- backtrackMapColoring(assignment, csp)
+      result = self.backtrackMapColoring(m, colors, vertex + 1)
+      # if result != failure then return result
+      if result == True:
+        self.canvas.itemconfig('node{}'.format(vertex), fill=self.colors[colors[color]-1])
+        return True
+      # remove { var = value } from assignment
+      colors[vertex] = 0
+
+  """
+  def graphColoring(self, m):
+    colors = [0] * self.vertices
+    vertex = 0
+    if self.backtrackMapColoring(m, colors, vertex) == None:
+      self.summary.insert(END, "No solution! for {} color(s)".format(m))
+      return False
+    # Print the solution
+    self.summary.insert(END, "Assigned {} color(s):".format(m))
+    for color in colors:
+      self.summary.insert(END, self.colors[color-1])
+    nodeLen = len(self.nodes)
+    for index in range(nodeLen):
+      self.summary.insert(END, 'node{} = {}'.format(index+1, self.colors[colors[index]-1]))
+      #self.canvas.itemconfig('node{}'.format(index), fill=self.colors[colors[index]-1])
+    return True
+  """
+
+  def doMapColoring(self, m):
     self.selectedMainMenu = None
     self.summary.delete(0, END)
     self.summary.insert(END, '*** MAP COLORING ***')
     # perform coloring
     self.generateAdjacencyMatrix()
-    print('Matrix: ', self.matrix)
+    #print('Matrix: ', self.matrix)
     method = None
     self.showAdjacencyMatrix(method)
     # sort all the vertices with highest number of neighbors
     nodeLen = len(self.nodes)
     rows = {}
+    graph = []
     for row in range(nodeLen):
+      item = []
       for col in range(nodeLen):
         if row not in rows:
           rows[row] = 0
         rows[row] += 1 if self.matrix[row][col]['linked'] else 0
-    print(rows)
+        item.append(1 if self.matrix[row][col]['linked'] else 0)
+      graph.append(item)
+    #print(rows)
+    #print(graph)
+    self.graph = graph
+    self.vertices = len(graph)
+    #self.graphColoring(m)
+    colors = [0] * self.vertices
+    vertex = 0
+    if self.backtrackMapColoring(m, colors, vertex) == None:
+      self.summary.insert(END, "No solution! for {} color(s)".format(m))
+      return False
+    # Print the solution
+    self.summary.insert(END, "Assigned {} color(s):".format(m))
+    for color in colors:
+      self.summary.insert(END, self.colors[color-1])
+    nodeLen = len(self.nodes)
+    for index in range(nodeLen):
+      self.summary.insert(END, 'node{} = {}'.format(index+1, self.colors[colors[index]-1]))
+      self.canvas.itemconfig('node{}'.format(index), fill=self.colors[colors[index]-1])
+    return True
     #for row in rows:
     #  self.summary.insert(END, row)
 
@@ -843,9 +908,16 @@ class Form(Machine):
     # map coloring
     mapmenu = Menu(self.menubar)
     mapmenu.add_command(label='Select', command=self.doMapSelect)
-    mapmenu.add_command(label='Run', command=self.doMapColoring)
+    #mapmenu.add_command(label='Run', command=self.doMapColoring)
+    maprunmenu = Menu(self.menubar, tearoff=0)
+    maprunmenu.add_command(label='1 color', command=lambda: self.doMapColoring(1))
+    maprunmenu.add_command(label='2 colors', command=lambda: self.doMapColoring(2))
+    maprunmenu.add_command(label='3 colors', command=lambda: self.doMapColoring(3))
+    maprunmenu.add_command(label='4 colors', command=lambda: self.doMapColoring(4))
+    maprunmenu.add_command(label='5 colors', command=lambda: self.doMapColoring(5))
+    maprunmenu.add_command(label='6 colors', command=lambda: self.doMapColoring(6))
+    mapmenu.add_cascade(label='Run', menu=maprunmenu)
     self.menubar.add_cascade(label='Map Coloring', menu=mapmenu)
-
     self.tk.config(menu=self.menubar)
 
   def createEdge(self, event):
