@@ -1036,16 +1036,18 @@ class Form(Machine):
     ann.train()
 
   def classifyANN(self):
-    #classification = 'Consonant' if self.selectedCmaps[1] else 'Vowel'
-    #self.canvas.itemconfig('classify', text=classification)
     ann = Perceptron(self)
     isVowel = ann.classify()
     self.canvas.itemconfig('classify', text=('Vowel' if isVowel else 'Consonant'))
-    """
-    result = predict1(ann.perceptron.nodes)
-    print('predict',str(result))
-    ann.perceptron.result(result)
-    """
+
+  def trainAdaline(self):
+    ann = Adaline(self)
+    ann.train()
+
+  def classifyAdaline(self):
+    ann = Adaline(self)
+    isVowel = ann.classify()
+    self.canvas.itemconfig('classify', text=('Vowel' if isVowel else 'Consonant'))
 
   def redrawANNMap(self, char):
     if char not in self.ANNMaps:
@@ -1115,7 +1117,13 @@ class Form(Machine):
     annmenu.add_command(label='Reset Output', command=self.resetANNOutput)
     annmenu.add_command(label='Train', command=self.trainANN)
     annmenu.add_command(label='Classify', command=self.classifyANN)
-    self.menubar.add_cascade(label='ANN', menu=annmenu)
+    self.menubar.add_cascade(label='Perceptron', menu=annmenu)
+    adamenu = Menu(self.menubar)
+    adamenu.add_command(label='Load', command=self.loadJSONANN)
+    adamenu.add_command(label='Reset Output', command=self.resetANNOutput)
+    adamenu.add_command(label='Train', command=self.trainAdaline)
+    adamenu.add_command(label='Classify', command=self.classifyAdaline)
+    self.menubar.add_cascade(label='Adaline', menu=adamenu)
     self.tk.config(menu=self.menubar)
 
   def createEdge(self, event):
