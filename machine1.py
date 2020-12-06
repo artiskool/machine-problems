@@ -97,6 +97,7 @@ class Form(Machine):
   MENU_SEARCH_A_STAR = 11
   MENU_MAP_COLORING = 12
   MENU_TRAVELING_SALESMAN_PROBLEM = 13
+  MENU_ANN = 14
 
   SORT_QUEUE = 1
   SORT_STACK = 2
@@ -142,6 +143,7 @@ class Form(Machine):
     self.matrix = {}
     self.startNode = None
     self.goalNode = None
+    self.loadJSONANN()
 
   def loadMapImage(self):
     # START loading background image and default endpoints
@@ -953,8 +955,61 @@ class Form(Machine):
 
   def loadJSONANN(self):
     self.doFileNew()
-    self.loadMap()
-    self.redraw('./data/ann.json')
+    self.selectedMainMenu = self.MENU_ANN
+    self.alphaButtons = []
+    #self.loadMap()
+    # create an option menu
+    dimension = 24
+    x = 5
+    y = 5
+    alphabets = [
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+      'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+      'U', 'V', 'W', 'X', 'Y', 'Z'
+    ]
+    for i in range(0, 26):
+      x2 = x + dimension
+      y2 = y + dimension
+      self.alphaButtons.append({'x': x, 'y': y, 'x2': x2, 'y2': y2, 'index': i, 'alpha': alphabets[i]})
+      self.canvas.create_rectangle(x, y, x2, y2, outline="black", fill="white", tags='box_{}'.format(i))
+      self.canvas.create_text((x+x2)/2, (y+y2)/2, text=alphabets[i], font=('Monaco', 14, 'italic'), fill='black', tags='alpha_{}'.format(i))
+      x = x2
+      #y = y2
+    self.cmaps = []
+    self.selectedCmaps = [True] # index 0 is biased
+    dimension = 70
+    x = 30
+    y = 70
+    for i in range(1, 36):
+      x2 = x + dimension
+      y2 = y + dimension
+      self.selectedCmaps.append(False)
+      self.cmaps.append({'x': x, 'y': y, 'x2': x2, 'y2': y2, 'index': i})
+      self.canvas.create_rectangle(x, y, x2, y2, outline="black", fill="white", tags='cmap_{}'.format(i))
+      self.canvas.create_text(x+8, y+8, text=i, font=('Monaco', 10, 'italic'), fill='red', tags='calpha_{}'.format(i))
+      x = x2
+      if i % 5 == 0:
+        x = 30
+        y += dimension
+    self.canvas.create_text((x2+(dimension*2)), y/2, text='', font=('Monaco', 30, 'italic'), fill='blue', tags='classify')
+    self.canvas.pack(fill=BOTH, expand=1)
+    self.resetANNOutput()
+    #self.redraw('./data/ann.json')
+
+  def resetANNOutput(self):
+    self.canvas.itemconfig('classify', text='...')
+
+  def trainANN(self):
+    pass
+
+  def classifyANN(self):
+    classification  = 'Consonant' if self.canvas.itemcget('classify', 'text') == 'Vowel' else 'Vowel'
+    print(self.canvas.itemcget('classify', 'text'))
+    print(classification)
+    self.canvas.itemconfig('classify', text=classification)
+    print(self.selectedCmaps)
+    #self.canvas.create_text(x+8, y+8, text=i, font=('Monaco', 10, 'italic'), fill='red', tags='classify'.format(i))
+    pass
 
   def buildMenu(self):
     self.menubar = Menu(self.tk)
@@ -962,8 +1017,8 @@ class Form(Machine):
     #loadmenu.add_command(label='Map', command=self.loadMap)
     loadmenu.add_command(label='Uninformed/Informed', command=self.loadJSONUniformed)
     loadmenu.add_command(label='Traveling Salesman Problem', command=self.loadJSONTSP)
-    loadmenu.add_command(label='Map Coloring', command=self.loadJSONMapColoring)
-    loadmenu.add_command(label='ANN', command=self.loadJSONANN)
+    #loadmenu.add_command(label='Map Coloring', command=self.loadJSONMapColoring)
+    #loadmenu.add_command(label='ANN', command=self.loadJSONANN)
     # File menu
     filemenu = Menu(self.menubar, tearoff=0)
     filemenu.add_command(label='New', command=self.doFileNew)
@@ -997,6 +1052,7 @@ class Form(Machine):
     self.menubar.add_cascade(label='Search', menu=searchmenu)
     # map coloring
     mapmenu = Menu(self.menubar)
+    mapmenu.add_command(label='Load', command=self.loadJSONMapColoring)
     mapmenu.add_command(label='Select', command=self.doMapSelect)
     #mapmenu.add_command(label='Run', command=self.doMapColoring)
     maprunmenu = Menu(self.menubar, tearoff=0)
@@ -1008,10 +1064,30 @@ class Form(Machine):
     maprunmenu.add_command(label='6 colors', command=lambda: self.doMapColoring(6))
     mapmenu.add_cascade(label='Run', menu=maprunmenu)
     self.menubar.add_cascade(label='Map Coloring', menu=mapmenu)
+    annmenu = Menu(self.menubar)
+    annmenu.add_command(label='Load', command=self.loadJSONANN)
+    annmenu.add_command(label='Reset Output', command=self.resetANNOutput)
+    annmenu.add_command(label='Train', command=self.trainANN)
+    annmenu.add_command(label='Classify', command=self.classifyANN)
+    self.menubar.add_cascade(label='ANN', menu=annmenu)
     self.tk.config(menu=self.menubar)
 
   def createEdge(self, event):
     x, y = event.x, event.y
+    if self.selectedMainMenu == self.MENU_ANN:
+      print(event)
+      for coords in self.alphaButtons:
+        if coords['x'] < x and x < coords['x2'] and coords['y'] < y and y < coords['y2']:
+          print(coords['alpha'])
+          return
+      for coords in self.cmaps:
+        if coords['x'] < x and x < coords['x2'] and coords['y'] < y and y < coords['y2']:
+          color = 'black' if self.canvas.itemcget('cmap_{}'.format(coords['index']), 'fill') == 'white' else 'white'
+          self.canvas.itemconfig('cmap_{}'.format(coords['index']), fill=color)
+          self.selectedCmaps[coords['index']] = True if color == 'black' else False
+          #print(self.selectedCmaps)
+          return
+      return
     # check for out of bounds
     size = self.DEFAULT_SIZE / 2
     x = self.width - size if x > (self.width - size) else x
