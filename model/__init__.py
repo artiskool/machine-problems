@@ -1,1 +1,2 @@
-from .ann import ANN
+from .perceptron import Perceptron
+from .adaline import Adaline

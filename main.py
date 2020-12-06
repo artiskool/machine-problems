@@ -4,7 +4,7 @@ import json
 from tkinter import *
 from tkinter import filedialog
 from PIL import Image, ImageTk
-from model import ANN
+from model import Perceptron, Adaline
 
 
 class Machine:
@@ -1032,13 +1032,13 @@ class Form(Machine):
     self.canvas.itemconfig('classify', text='...')
 
   def trainANN(self):
-    ann = ANN(self)
+    ann = Perceptron(self)
     ann.train()
 
   def classifyANN(self):
     #classification = 'Consonant' if self.selectedCmaps[1] else 'Vowel'
     #self.canvas.itemconfig('classify', text=classification)
-    ann = ANN(self)
+    ann = Perceptron(self)
     isVowel = ann.classify()
     self.canvas.itemconfig('classify', text=('Vowel' if isVowel else 'Consonant'))
     """

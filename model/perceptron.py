@@ -2,7 +2,7 @@ import json
 import random
 from random import randrange
 
-class ANN():
+class Perceptron():
   def __init__(self, machine):
     self.weightFilename = './data/weights.json'
     self.machine = machine
@@ -82,7 +82,7 @@ class ANN():
     for epoch in range(maxEpoch):
       totalError = 0
       for row in train:
-        error = row[-1] - self.stepFunction(row, weights) #error = y - stepFunction
+        error = row[-1] - self.stepFunction(row, weights) #error = y - activationFunction
         totalError += abs(error)
         weights[0] += rate * error
         for i in range(len(row)-1):
