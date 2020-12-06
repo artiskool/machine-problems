@@ -61,7 +61,7 @@ class Edge(Machine):
     px = (self.point.x + self.point2.x) / 2
     py = (self.point.y + self.point2.y) / 2
     # create label distance
-    self.text = canvas.create_text(px, py, text=self.distance, font={'Consolas', 14, 'italic'}, fill='red') if with_text else None
+    self.text = canvas.create_text(px, py, text=self.distance, font=('Monaco', 14, 'italic'), fill='red') if with_text else None
     self.canvas = canvas
 
   def toJSON(self):
@@ -74,7 +74,7 @@ class Node(Machine):
     self.point2 = Point(x + self.DEFAULT_SIZE, y + self.DEFAULT_SIZE)
     self.box = Box(self.point.x, self.point.y, self.point.x + self.DEFAULT_SIZE, self.point.y + self.DEFAULT_SIZE)
     self.graph = canvas.create_oval(self.box.left, self.box.top, self.box.right, self.box.bottom, fill=color, tags=tag)
-    self.text = canvas.create_text(self.point.x, self.point.y, text=label, font={'Consolas', 10, 'italic'}) #if with_text else None
+    self.text = canvas.create_text(self.point.x, self.point.y, text=label, font=('Monaco', 10, 'italic')) #if with_text else None
     self.heuristic = None
     self.heuristicValue = None
     self.canvas = canvas
@@ -96,6 +96,7 @@ class Form(Machine):
   MENU_SEARCH_BEST_FIRST = 10
   MENU_SEARCH_A_STAR = 11
   MENU_MAP_COLORING = 12
+  MENU_TRAVELING_SALESMAN_PROBLEM = 13
 
   SORT_QUEUE = 1
   SORT_STACK = 2
@@ -124,7 +125,7 @@ class Form(Machine):
     self.background = self.canvas.create_image(self.backgroundImage.width() / 2, self.backgroundImage.height() / 2, image=self.backgroundImage, anchor=CENTER)
     self.redraw('./data/bantayan-island.json')
 
-    self.summary = Listbox(self.canvas)
+    self.summary = Listbox(self.canvas, font=('Monaco', 10))
     #bolded = font.Font(weight='bold') # will use the default font
     #self.label.config(font=bolded)
     self.summary.pack()
@@ -309,19 +310,39 @@ class Form(Machine):
       self.tk.update()
     return previousVisitedNode
 
-  def showAdjacencyMatrix(self, method=None):
+  def showAdjacencyMatrix(self, method=None, showDistance=False):
     nodeLen = len(self.nodes)
     rows = []
     headers = [' ']
+    maxStr = 0
     for row in range(nodeLen):
       rowName = str(row+1)
       headers.append(rowName)
       cells = [rowName]
+      if len(rowName) > maxStr:
+          maxStr = len(rowName)
       for col in range(nodeLen):
-        cells.append('1' if self.matrix[row][col]['linked'] else '0')
-      rows.append(' | '.join(cells))
+        value = '0'
+        if self.matrix[row][col]['linked']:
+          if showDistance:
+            value = str(self.edges[self.matrix[row][col]['edge']].distance)
+          else:
+            value = '1'
+        cells.append(value)
+        if len(value) > maxStr:
+          maxStr = len(value)
+      #rows.append(' | '.join(cells))
+      rows.append(cells)
     self.summary.insert(END, '') # create extra space
     self.summary.insert(END, '=== ADJACENCY MATRIX ===')
+    # pad values for headers
+    for i in range(len(headers)):
+      headers[i] = headers[i].ljust(maxStr)
+    # pad values for cells
+    for i in range(len(rows)):
+      for j in range(len(rows[i])):
+        rows[i][j] = rows[i][j].ljust(maxStr)
+      rows[i] = (' | '.join(rows[i]))
     self.summary.insert(END, ' | '.join(headers))
     for row in rows:
       self.summary.insert(END, row)
@@ -381,7 +402,7 @@ class Form(Machine):
       if method in [self.SORT_PRIORITY_QUEUE_BFS, self.SORT_PRIORITY_QUEUE_ASS]:
         heuristic = self.calculateHeuristic(index)
         self.nodes[index].heuristicValue = heuristic
-        self.nodes[index].heuristic = self.canvas.create_text(node.point.x, node.point.y+30, text='h={}'.format(heuristic), font={'Consolas', 10, 'italic'}, fill='blue')
+        self.nodes[index].heuristic = self.canvas.create_text(node.point.x, node.point.y+30, text='h={}'.format(heuristic), font=('Monaco', 10, 'italic'), fill='blue')
     self.showAdjacencyMatrix(method)
     visited = []
     queue = [[self.startNode]]
@@ -757,9 +778,7 @@ class Form(Machine):
     # perform coloring
     self.generateAdjacencyMatrix()
     #print('Matrix: ', self.matrix)
-    method = None
-    self.showAdjacencyMatrix(method)
-    # sort all the vertices with highest number of neighbors
+    self.showAdjacencyMatrix()
     nodeLen = len(self.nodes)
     graph = []
     for row in range(nodeLen):
@@ -787,6 +806,110 @@ class Form(Machine):
       textColors.append("{}".format(self.colors[color]))
     self.summary.insert(END, "Solution: [{}]".format(", ".join(textColors)))
     return True
+
+  def permutation(self, elements):
+    if len(elements) == 0:
+      return elements
+    if len(elements) == 1:
+      return [elements]
+    dataset = []
+    for i in range(len(elements)):
+      #element = elements[i]
+      newElements = elements[:i] + elements[i+1:]
+      for perm in self.permutation(newElements):
+        dataset.append([elements[i]] + perm)
+    return dataset
+
+  def travellingSalesmanProblem(self, graph, vertex):
+    vertices = []
+    for i in range(self.vertices):
+      if i != vertex:
+        vertices.append(i)
+    minPath = None
+    minPaths = None
+    permVertices = self.permutation(vertices)
+    for i in permVertices:
+      sleep(2)
+      print(i)
+      weightPath = 0
+      # compute current path weight
+      k = vertex
+      paths = []
+      #print('COLORING')
+      colorChanges = []
+      for j in i:
+        if graph[k][j] == 0:
+          weightPath = 0
+          paths = []
+          break
+        paths.append((k, j, graph[k][j]))
+        colorChanges.append((k, j))
+        self.summary.insert(END, "node {} -> node {} = distance {}".format(k+1, j+1, graph[k][j]))
+        self.canvas.itemconfig('node{}'.format(k), fill="yellow")
+        self.canvas.itemconfig('edge{}'.format(self.matrix[k][j]['edge']), fill="yellow")
+        self.tk.update()
+        sleep(0.3) # TODO: to speed up, comment this out
+        weightPath += graph[k][j]
+        k = j
+      j = vertex
+      weightPath += graph[k][vertex]
+      paths.append((k, j, graph[k][vertex]))
+      colorChanges.append((k, j))
+      self.summary.insert(END, "node {} -> node {} = distance {}".format(k+1, j+1, graph[k][j]))
+      self.canvas.itemconfig('node{}'.format(k), fill="yellow")
+      self.canvas.itemconfig('edge{}'.format(self.matrix[k][j]['edge']), fill="yellow")
+      self.summary.insert(END, "PATH COST = {}".format(weightPath))
+      self.tk.update()
+      # update minimum
+      if minPath is None or weightPath > minPath:
+        minPath = weightPath
+        minPaths = paths
+      #print('REVERTING')
+      sleep(2)
+      for item in colorChanges:
+        k = item[0]
+        j = item[1]
+        self.canvas.itemconfig('node{}'.format(k), fill="red")
+        self.canvas.itemconfig('edge{}'.format(self.matrix[k][j]['edge']), fill="black")
+        self.tk.update()
+    print("minPaths")
+    print(minPaths)
+    if len(minPaths) > 0:
+      for path in minPaths:
+        row = path[0]
+        col = path[1]
+        self.canvas.itemconfig('node{}'.format(row), fill="green")
+        self.canvas.itemconfig('edge{}'.format(self.matrix[row][col]['edge']), fill="green")
+        self.tk.update()
+      row = 0
+      #if self.matrix[row][col]['linked']:
+      #  self.canvas.itemconfig('node{}'.format(col), fill="green")
+      #  self.canvas.itemconfig('edge{}'.format(self.matrix[row][col]['edge']), fill="green")
+      #self.tk.update()
+    return minPath
+
+  def doTravelingSalesmanProblem(self):
+    self.clearSelections()
+    self.selectedMainMenu = self.MENU_TRAVELING_SALESMAN_PROBLEM
+    self.summary.delete(0, END)
+    self.summary.insert(END, "*** TRAVELING SALESMAN PROBLEM ***")
+    self.summary.insert(END, "")
+    self.generateAdjacencyMatrix()
+    self.showAdjacencyMatrix(showDistance=True)
+    # compose the graph data
+    nodeLen = len(self.nodes)
+    graph = []
+    for row in range(nodeLen):
+      item = []
+      for col in range(nodeLen):
+        distance = self.edges[self.matrix[row][col]['edge']].distance if self.matrix[row][col]['linked'] else 0
+        #self.summary.insert(END, "{} -> {} = {}".format(row+1, col+1, distance))
+        item.append(distance)
+      graph.append(item)
+    print(graph)
+    self.vertices = len(graph)
+    min_path = self.travellingSalesmanProblem(graph, 0)
+    print(min_path)
 
   def buildMenu(self):
     self.menubar = Menu(self.tk)
@@ -817,6 +940,7 @@ class Form(Machine):
     searchmenu = Menu(self.menubar, tearoff=0)
     searchmenu.add_cascade(label='Uninformed', menu=uninformed_search)
     searchmenu.add_cascade(label='Informed', menu=informed_search)
+    searchmenu.add_command(label='Traveling Salesman Problem', command=self.doTravelingSalesmanProblem)
     self.menubar.add_cascade(label='Search', menu=searchmenu)
     # map coloring
     mapmenu = Menu(self.menubar)
