@@ -143,6 +143,34 @@ class Form(Machine):
     self.matrix = {}
     self.startNode = None
     self.goalNode = None
+    self.ANNMaps = {
+      'A': [3, 7, 9, 11, 15, 16, 17, 18, 19, 20, 21, 25, 26, 30, 31, 35],
+      'B': [1, 2, 3, 4, 6, 10, 11, 15, 16, 17, 18, 19, 21, 25, 26, 30, 31, 32, 33, 34],
+      'C': [2, 3, 4, 6, 10, 11, 16, 21, 26, 30, 32, 33, 34],
+      'D': [1, 2, 3, 4, 6, 10, 11, 15, 16, 20, 21, 25, 26, 30, 31, 32, 33, 34],
+      'E': [1, 2, 3, 4, 5, 6, 11, 16, 17, 18, 19, 21, 26, 31, 32, 33, 34, 35],
+      'F': [1, 2, 3, 4, 5, 6, 11, 16, 17, 18, 19, 21, 26, 31],
+      'G': [2, 3, 4, 6, 10, 11, 16, 17, 18, 19, 20, 21, 25, 26, 30, 32, 33, 34],
+      'H': [1, 5, 6, 10, 11, 15, 16, 17, 18, 19, 20, 21, 25, 26, 30, 31, 35],
+      'I': [1, 2, 3, 4, 5, 8, 13, 18, 23, 28, 31, 32, 33, 34, 35],
+      'J': [1, 2, 3, 4, 5, 8, 13, 18, 21, 23, 26, 28, 32, 33],
+      'K': [1, 5, 6, 9, 11, 13, 16, 17, 21, 23, 26, 29, 31, 35],
+      'L': [1, 6, 11, 16, 21, 26, 31, 32, 33, 34, 35],
+      'M': [1, 5, 6, 7, 9, 10, 11, 13, 15, 16, 20, 21, 25, 26, 30, 31, 35],
+      'N': [1, 5, 6, 7, 10, 11, 13, 15, 16, 19, 20, 21, 25, 26, 30, 31, 35],
+      'O': [2, 3, 4, 6, 10, 11, 15, 16, 20, 21, 25, 26, 30, 32, 33, 34],
+      'P': [2, 3, 4, 6, 10, 11, 15, 16, 17, 18, 19, 21, 26, 31],
+      'Q': [2, 3, 4, 6, 10, 11, 15, 16, 20, 21, 23, 25, 26, 29, 30, 32, 33, 34, 35],
+      'R': [2, 3, 4, 6, 10, 11, 15, 16, 17, 18, 19, 21, 23, 26, 29, 31, 35],
+      'S': [2, 3, 4, 6, 10, 11, 17, 18, 19, 25, 26, 30, 32, 33, 34],
+      'T': [1, 2, 3, 4, 5, 8, 13, 18, 23, 28, 33],
+      'U': [1, 5, 6, 10, 11, 15, 16, 20, 21, 25, 26, 30, 32, 33, 34],
+      'V': [1, 5, 6, 10, 11, 15, 16, 20, 21, 25, 27, 29, 33],
+      'W': [1, 5, 6, 10, 11, 15, 16, 20, 21, 23, 25, 26, 27, 29, 30, 31, 35],
+      'X': [1, 5, 6, 10, 12, 14, 18, 22, 24, 26, 30, 31, 35],
+      'Y': [1, 5, 6, 10, 12, 13, 14, 15, 20, 25, 26, 30, 32, 33, 34],
+      'Z': [1, 2, 3, 4, 5, 10, 14, 18, 22, 26, 31, 32, 33, 34, 35],
+    }
     self.loadJSONANN()
 
   def loadMapImage(self):
@@ -962,11 +990,7 @@ class Form(Machine):
     dimension = 24
     x = 5
     y = 5
-    alphabets = [
-      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-      'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-      'U', 'V', 'W', 'X', 'Y', 'Z'
-    ]
+    alphabets = list(self.ANNMaps.keys())
     for i in range(0, 26):
       x2 = x + dimension
       y2 = y + dimension
@@ -1003,13 +1027,18 @@ class Form(Machine):
     pass
 
   def classifyANN(self):
-    classification  = 'Consonant' if self.canvas.itemcget('classify', 'text') == 'Vowel' else 'Vowel'
-    print(self.canvas.itemcget('classify', 'text'))
-    print(classification)
+    classification = 'Consonant' if self.selectedCmaps[1] else 'Vowel'
     self.canvas.itemconfig('classify', text=classification)
-    print(self.selectedCmaps)
-    #self.canvas.create_text(x+8, y+8, text=i, font=('Monaco', 10, 'italic'), fill='red', tags='classify'.format(i))
-    pass
+
+  def redrawANNMap(self, char):
+    if char not in self.ANNMaps:
+      return
+    for index in range(1, len(self.selectedCmaps)):
+      color = 'black' if index in self.ANNMaps[char] else 'white'
+      textcolor = 'green' if index in self.ANNMaps[char] else 'red'
+      self.canvas.itemconfig('cmap_{}'.format(index), fill=color)
+      self.canvas.itemconfig('calpha_{}'.format(index), fill=textcolor)
+      self.selectedCmaps[index] = True if index in self.ANNMaps[char] else False
 
   def buildMenu(self):
     self.menubar = Menu(self.tk)
@@ -1075,15 +1104,16 @@ class Form(Machine):
   def createEdge(self, event):
     x, y = event.x, event.y
     if self.selectedMainMenu == self.MENU_ANN:
-      print(event)
       for coords in self.alphaButtons:
         if coords['x'] < x and x < coords['x2'] and coords['y'] < y and y < coords['y2']:
-          print(coords['alpha'])
+          self.redrawANNMap(coords['alpha'])
           return
       for coords in self.cmaps:
         if coords['x'] < x and x < coords['x2'] and coords['y'] < y and y < coords['y2']:
           color = 'black' if self.canvas.itemcget('cmap_{}'.format(coords['index']), 'fill') == 'white' else 'white'
+          textcolor = 'green' if self.canvas.itemcget('calpha_{}'.format(coords['index']), 'fill') == 'red' else 'red'
           self.canvas.itemconfig('cmap_{}'.format(coords['index']), fill=color)
+          self.canvas.itemconfig('calpha_{}'.format(coords['index']), fill=textcolor)
           self.selectedCmaps[coords['index']] = True if color == 'black' else False
           #print(self.selectedCmaps)
           return
