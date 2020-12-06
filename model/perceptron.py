@@ -3,8 +3,10 @@ import random
 from random import randrange
 
 class Perceptron():
+  name = 'perceptron'
   def __init__(self, machine):
-    self.weightFilename = './data/weights.json'
+    self.weightFilename = './data/weights_{}.json'.format(self.name)
+    self.datasetFilename = './data/dataset_{}.json'.format(self.name)
     self.machine = machine
     self.weights = []
     self.loadWeights()
@@ -22,7 +24,7 @@ class Perceptron():
     return self.weights
 
   def loadTrainingDataset(self):
-    contents = open('./data/ann_training_dataset.json').read(999999999)
+    contents = open(self.datasetFilename).read(999999999)
     objects = json.loads(contents)
     if not objects:
       return
