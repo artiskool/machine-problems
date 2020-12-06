@@ -13,20 +13,26 @@ class Perceptron():
     self.nodes = []
     for key in range(len(machine.selectedCmaps)):
       value = machine.selectedCmaps[key]
-      self.nodes.append({'input': value, 'index': key, 'weight': self.weights[key]})
+      self.nodes.append({'input': value, 'index': key, 'weight': self.weights[key] if key in self.weights else None})
 
   def loadWeights(self):
-    contents = open(self.weightFilename).read(999999999)
-    objects = json.loads(contents)
-    if not objects:
+    try:
+      contents = open(self.weightFilename).read(999999999)
+      objects = json.loads(contents)
+      if not objects:
+        return
+    except:
       return
     self.weights = objects
     return self.weights
 
   def loadTrainingDataset(self):
-    contents = open(self.datasetFilename).read(999999999)
-    objects = json.loads(contents)
-    if not objects:
+    try:
+      contents = open(self.datasetFilename).read(999999999)
+      objects = json.loads(contents)
+      if not objects:
+        return
+    except:
       return
     self.trainingDataset = objects
     return self.trainingDataset
@@ -41,9 +47,9 @@ class Perceptron():
     self.machine.logSummary('')
     self.machine.logSummary('=== TRAINING DATASET ===')
     dataset = self.loadTrainingDataset()
-    splits = 3 # split the dataset into 3
-    rate = 0.13
-    maxEpoch = 500
+    splits = 3 # split the dataset by 3 folds, 33% each
+    self.learningRate = 0.13
+    maxEpoch = 100
     # randomly split the dataset into 3 folds
     folds = []
     datasetCopy = list(dataset)
@@ -56,48 +62,52 @@ class Perceptron():
       folds.append(fold)
     scores = []
     for fold in folds:
-      trainSet = list(folds)
-      trainSet.remove(fold)
-      trainSet = sum(trainSet, [])
+      y = [row[-1] for row in fold] # get all y's
+      X = list(folds)
+      X.remove(fold)
+      X = sum(X, [])
+      # train the model
+      weights = [random.random() for i in range(len(X[0]))]
+      for epoch in range(maxEpoch):
+        totalError = self.fit(X, weights)
+        if totalError == 0:
+          self.machine.logSummary('epoch: {}'.format(epoch))
+          self.machine.logSummary('total error: {}'.format(totalError))
+          break
+      # save the weights for future use
+      contents = json.dumps(weights, sort_keys=True, indent=4)
+      f = open(self.weightFilename, 'w')
+      f.write(contents)
+      f.close()
+      # try predicting test sets
       testSet = []
       for row in fold:
         rowCopy = list(row)
         rowCopy[-1] = None
         testSet.append(rowCopy)
       predicted = []
-      weights = self.trainWeights(trainSet, rate, maxEpoch)
       for row in testSet:
         predicted.append(self.stepFunction(row, weights))
-      actual = [row[-1] for row in fold] # get all y's
-      # calculate accuracy
-      correct = 0
-      for i in range(len(actual)):
-        if actual[i] == predicted[i]:
-          correct += 1
-      accuracy = correct / float(len(actual)) * 100
-      scores.append(accuracy)
+      scores.append(self.score(y, predicted))
     self.machine.logSummary('Scores: {}'.format(scores))
     self.machine.logSummary('Average: {}'.format(('%.2f%%' % (sum(scores)/float(len(scores))))))
 
-  def trainWeights(self, train, rate, maxEpoch):
-    weights = [random.random() for i in range(len(train[0]))]
-    for epoch in range(maxEpoch):
-      totalError = 0
-      for row in train:
-        error = row[-1] - self.stepFunction(row, weights) #error = y - activationFunction
-        totalError += abs(error)
-        weights[0] += rate * error
-        for i in range(len(row)-1):
-          weights[i+1] += rate * error * row[i]
-      if totalError == 0:
-        self.machine.logSummary('epoch: {}'.format(epoch))
-        self.machine.logSummary('total error: {}'.format(totalError))
-        break
-    contents = json.dumps(weights, sort_keys=True, indent=4)
-    f = open(self.weightFilename, 'w')
-    f.write(contents)
-    f.close()
-    return weights
+  def score(self, X, y):
+    correct = 0
+    for i in range(len(X)):
+      if X[i] == y[i]:
+        correct += 1
+    return correct / float(len(X)) * 100
+
+  def fit(self, X, weights):
+    totalError = 0
+    for row in X:
+      error = row[-1] - self.stepFunction(row, weights) #error = y - activationFunction
+      totalError += abs(error)
+      weights[0] += self.learningRate * error
+      for i in range(len(row)-1):
+        weights[i+1] += self.learningRate * error * row[i]
+    return totalError
 
   def stepFunction(self, row, weights):
     activation = weights[0]
