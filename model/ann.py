@@ -65,7 +65,7 @@ class ANN():
       predicted = []
       weights = self.trainWeights(trainSet, rate, maxEpoch)
       for row in testSet:
-        predicted.append(self.activationFunction(row, weights))
+        predicted.append(self.stepFunction(row, weights))
       actual = [row[-1] for row in fold] # get all y's
       # calculate accuracy
       correct = 0
@@ -82,7 +82,7 @@ class ANN():
     for epoch in range(maxEpoch):
       totalError = 0
       for row in train:
-        error = row[-1] - self.activationFunction(row, weights) #error = y - activationFunction
+        error = row[-1] - self.stepFunction(row, weights) #error = y - stepFunction
         totalError += abs(error)
         weights[0] += rate * error
         for i in range(len(row)-1):
@@ -97,7 +97,7 @@ class ANN():
     f.close()
     return weights
 
-  def activationFunction(self, row, weights):
+  def stepFunction(self, row, weights):
     activation = weights[0]
     for i in range(len(row)-1):
       activation += weights[i+1] * row[i]
