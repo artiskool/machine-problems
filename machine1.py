@@ -105,7 +105,8 @@ class Form(Machine):
   SORT_PRIORITY_QUEUE_ASS = 5
 
   def __init__(self, title='Machine Problems', width=1024, height=768):
-    self.reset()
+    self.reset(True)
+    self.title = title
     self.width = width
     self.height = height
     self.selectedMenu = None
@@ -119,11 +120,16 @@ class Form(Machine):
     self.canvas.pack()
     #self.canvas.pack(expand = YES, fill = BOTH)
     self.canvas.bind('<ButtonRelease-1>', self.createEdge)
+    self.loadMapImage()
     # START loading background image and default endpoints
-    self.backgroundImage = ImageTk.PhotoImage(Image.open('./data/bantayan-island.png'))
-    self.canvas.config(height=self.backgroundImage.height(), width=self.backgroundImage.width()*1.5)
+    """
+    self.backgroundImage = ImageTk.PhotoImage(Image.open('./data/bantayan_island.png'))
+    self.backgroundHeight = self.backgroundImage.height()
+    self.backgroundWidth = self.backgroundImage.width()*1.5
+    self.canvas.config(height=self.backgroundHeight, width=self.backgroundWidth)
     self.background = self.canvas.create_image(self.backgroundImage.width() / 2, self.backgroundImage.height() / 2, image=self.backgroundImage, anchor=CENTER)
-    self.redraw('./data/bantayan-island.json')
+    """
+    self.redraw('./data/bantayan_island.json')
 
     self.summary = Listbox(self.canvas, font=('Monaco', 10))
     #bolded = font.Font(weight='bold') # will use the default font
@@ -137,13 +143,29 @@ class Form(Machine):
     self.startNode = None
     self.goalNode = None
 
+  def loadMapImage(self):
+    # START loading background image and default endpoints
+    self.backgroundImage = ImageTk.PhotoImage(Image.open('./data/bantayan_island.png'))
+    self.backgroundHeight = self.backgroundImage.height()
+    self.backgroundWidth = self.backgroundImage.width()*1.5
+    self.canvas.config(height=self.backgroundHeight, width=self.backgroundWidth)
+    self.background = self.canvas.create_image(self.backgroundImage.width() / 2, self.backgroundImage.height() / 2, image=self.backgroundImage, anchor=CENTER)
+
   def start(self):
     self.tk.mainloop()
 
-  def reset(self):
+  def reset(self, init=False):
     self.nodes = []
     self.edges = []
     self.selections = []
+    if init:
+      return
+    self.clearBackgroundImage()
+
+  def clearBackgroundImage(self):
+    if self.backgroundImage is not None:
+      self.canvas.config(height=self.backgroundHeight, width=self.backgroundWidth)
+    self.backgroundImage = None
 
   def dumpGraphs(self):
     graphs = {'nodes': [], 'edges': []}
@@ -911,13 +933,44 @@ class Form(Machine):
     min_path = self.travellingSalesmanProblem(graph, 0)
     print(min_path)
 
+  def loadMap(self):
+    self.loadMapImage()
+
+  def loadJSONUniformed(self):
+    self.doFileNew()
+    self.loadMap()
+    self.redraw('./data/bantayan_island.json')
+
+  def loadJSONTSP(self):
+    self.doFileNew()
+    self.loadMap()
+    self.redraw('./data/traveling_salesman.json')
+
+  def loadJSONMapColoring(self):
+    self.doFileNew()
+    self.loadMap()
+    self.redraw('./data/map_coloring.json')
+
+  def loadJSONANN(self):
+    self.doFileNew()
+    self.loadMap()
+    self.redraw('./data/ann.json')
+
   def buildMenu(self):
     self.menubar = Menu(self.tk)
+    loadmenu = Menu(self.menubar, tearoff=0)
+    #loadmenu.add_command(label='Map', command=self.loadMap)
+    loadmenu.add_command(label='Uninformed/Informed', command=self.loadJSONUniformed)
+    loadmenu.add_command(label='Traveling Salesman Problem', command=self.loadJSONTSP)
+    loadmenu.add_command(label='Map Coloring', command=self.loadJSONMapColoring)
+    loadmenu.add_command(label='ANN', command=self.loadJSONANN)
     # File menu
     filemenu = Menu(self.menubar, tearoff=0)
     filemenu.add_command(label='New', command=self.doFileNew)
+    filemenu.add_cascade(label='Load', menu=loadmenu)
     filemenu.add_command(label='Open', command=self.doFileOpen)
     filemenu.add_command(label='Save', command=self.doFileSave)
+    filemenu.add_command(label='Clear Background', command=self.clearBackgroundImage)
     filemenu.add_separator()
     filemenu.add_command(label='Exit', command=self.doFileExit)
     self.menubar.add_cascade(label='File', menu=filemenu)
