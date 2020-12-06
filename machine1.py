@@ -4,6 +4,7 @@ import json
 from tkinter import *
 from tkinter import filedialog
 from PIL import Image, ImageTk
+from model import ANN
 
 
 class Machine:
@@ -171,7 +172,14 @@ class Form(Machine):
       'Y': [1, 5, 6, 10, 12, 13, 14, 15, 20, 25, 26, 30, 32, 33, 34],
       'Z': [1, 2, 3, 4, 5, 10, 14, 18, 22, 26, 31, 32, 33, 34, 35],
     }
+    self.ANNVowelConsonants = {
+      'v': ['A', 'E', 'I', 'O', 'U'],
+      'c': ['B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z']
+    }
     self.loadJSONANN()
+
+  def logSummary(self, log):
+    self.summary.insert(END, log)
 
   def loadMapImage(self):
     # START loading background image and default endpoints
@@ -1024,11 +1032,20 @@ class Form(Machine):
     self.canvas.itemconfig('classify', text='...')
 
   def trainANN(self):
-    pass
+    ann = ANN(self)
+    ann.train()
 
   def classifyANN(self):
-    classification = 'Consonant' if self.selectedCmaps[1] else 'Vowel'
-    self.canvas.itemconfig('classify', text=classification)
+    #classification = 'Consonant' if self.selectedCmaps[1] else 'Vowel'
+    #self.canvas.itemconfig('classify', text=classification)
+    ann = ANN(self)
+    isVowel = ann.classify()
+    self.canvas.itemconfig('classify', text=('Vowel' if isVowel else 'Consonant'))
+    """
+    result = predict1(ann.perceptron.nodes)
+    print('predict',str(result))
+    ann.perceptron.result(result)
+    """
 
   def redrawANNMap(self, char):
     if char not in self.ANNMaps:
