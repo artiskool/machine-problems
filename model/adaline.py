@@ -3,7 +3,7 @@ from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from model import Neuron
 
-class CustomAdaline(Neuron):
+class Adaline(Neuron):
   def __init__(self, n_iterations=100, random_state=1, learning_rate=0.001):
     self.n_iterations = n_iterations
     self.random_state = random_state
@@ -91,7 +91,7 @@ y = bc.target
 # Create training and test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
 # Instantiate CustomPerceptron
-adaline = CustomAdaline(n_iterations = 10)
+adaline = Adaline(n_iterations = 10)
 # Fit the model
 adaline.fit(X_train, y_train)
 
