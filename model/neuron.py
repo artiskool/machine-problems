@@ -2,7 +2,7 @@ import math
 from random import random, randrange
 
 class Neuron(object):
-  def __init__(self, n_iterations=500, learning_rate=0.13):
+  def __init__(self, n_iterations=500, learning_rate=0.1):
     self.n_iterations = n_iterations
     self.learning_rate = learning_rate
 
