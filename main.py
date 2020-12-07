@@ -1032,12 +1032,33 @@ class Form(Machine):
     self.canvas.itemconfig('classify', text='...')
 
   def trainANN(self):
-    ann = Perceptron(self)
-    ann.train()
+    self.summary.insert(END, '')
+    contents = open('./data/dataset_perceptron.json').read(999999999)
+    objects = json.loads(contents)
+    X = [row[:-1] for row in objects]
+    y = [row[-1] for row in objects]
+    perceptron = Perceptron()
+    # Create training and test split
+    X_train, X_test, y_train, y_test = perceptron.train_test_split(X, y)
+    # Fit the model
+    weights, epoch = perceptron.fit(X_train, y_train)
+    contents = json.dumps(weights, sort_keys=True, indent=4)
+    f = open('./data/weights_perceptron.json', 'w')
+    f.write(contents)
+    f.close()
+    self.summary.insert(END, 'Epoch: {}'.format(epoch))
+    #weightStr = json.dumps(weights, sort_keys=True, indent=4)
+    self.summary.insert(END, 'Weights: {}'.format(weights))
+    # Score the model
+    self.summary.insert(END, 'Train Score: {}'.format(perceptron.score(X_train, y_train)))
+    self.summary.insert(END, 'Test Score: {}'.format(perceptron.score(X_test, y_test)))
 
   def classifyANN(self):
-    ann = Perceptron(self)
-    isVowel = ann.classify()
+    perceptron = Perceptron()
+    self.summary.insert(END, '')
+    contents = open('./data/weights_perceptron.json').read(999999999)
+    perceptron.weights = json.loads(contents)
+    isVowel = perceptron.predict(self.selectedCmaps[1:])
     self.canvas.itemconfig('classify', text=('Vowel' if isVowel else 'Consonant'))
 
   def trainAdaline(self):
@@ -1132,6 +1153,8 @@ class Form(Machine):
       for coords in self.alphaButtons:
         if coords['x'] < x and x < coords['x2'] and coords['y'] < y and y < coords['y2']:
           self.redrawANNMap(coords['alpha'])
+          self.resetANNOutput()
+          #print(self.selectedCmaps)
           return
       for coords in self.cmaps:
         if coords['x'] < x and x < coords['x2'] and coords['y'] < y and y < coords['y2']:
