@@ -58,3 +58,27 @@ class Neuron(object):
       X_test.append(datasetX.pop(index))
       y_test.append(datasetY.pop(index))
     return X_train, X_test, y_train, y_test
+
+  def dot(self, X, Y):
+    """
+    Linear algebra
+    Dot product: product of two arrays
+    f = np.array([1,2])
+    g = np.array([4,5])
+    ### (1*4)+(2*5) = 14
+    np.dot(f, g)
+    """
+    X = list(X)
+    if type(X[0]) is list:
+      totals = []
+      for i in range(len(X)):
+        total = 0
+        for j in range(len(X[i])):
+          total += X[i][j] * Y[j]
+        totals.append(total)
+      return totals
+    total = 0
+    Y = list(Y)
+    for i in range(len(X)):
+      total += X[i] * Y[i]
+    return total
