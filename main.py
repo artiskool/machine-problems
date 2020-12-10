@@ -1032,12 +1032,12 @@ class Form(Machine):
     self.canvas.itemconfig('classify', text='...')
 
   def trainPerceptron(self):
-    self.summary.insert(END, '')
+    self.summary.insert(END, 'Training Perceptron')
     contents = open('./data/dataset_perceptron.json').read(999999999)
     objects = json.loads(contents)
     X = [row[:-1] for row in objects]
     y = [row[-1] for row in objects]
-    perceptron = Perceptron(learning_rate = 0.1, iterations = 50)
+    perceptron = Perceptron()
     # Create training and test split
     X_train, X_test, y_train, y_test = perceptron.train_test_split(X, y)
     # Fit the model
@@ -1054,8 +1054,8 @@ class Form(Machine):
     self.summary.insert(END, 'Test Score: {}'.format(perceptron.score(X_test, y_test)))
 
   def classifyPerceptron(self):
-    perceptron = Perceptron(learning_rate = 0.1, iterations = 50)
-    #self.summary.insert(END, '')
+    perceptron = Perceptron()
+    self.summary.insert(END, 'Predict Perceptron')
     contents = open('./data/weights_perceptron.json').read(999999999)
     perceptron.weights = json.loads(contents)
     isVowel = perceptron.predict(self.selectedCmaps)
@@ -1064,12 +1064,12 @@ class Form(Machine):
     self.summary.insert(END, "Perceptron: {} = {}".format(self.letter, classification))
 
   def trainAdaline(self):
-    self.summary.insert(END, '')
+    self.summary.insert(END, 'Train Adaline')
     contents = open('./data/dataset_adaline.json').read(999999999)
     objects = json.loads(contents)
     X = [row[:-1] for row in objects]
     y = [row[-1] for row in objects]
-    adaline = Adaline(learning_rate = 0.001, iterations = 50)
+    adaline = Adaline(learning_rate = 0.001)
     # Create training and test split
     X_train, X_test, y_train, y_test = adaline.train_test_split(X, y)
     # Fit the model
@@ -1086,8 +1086,8 @@ class Form(Machine):
     self.summary.insert(END, 'Test Score: {}'.format(adaline.score(X_test, y_test)))
 
   def classifyAdaline(self):
-    adaline = Adaline(learning_rate = 0.001, iterations = 50)
-    #self.summary.insert(END, '')
+    adaline = Adaline(learning_rate = 0.001)
+    self.summary.insert(END, 'Predict Adaline')
     contents = open('./data/weights_adaline.json').read(999999999)
     adaline.weights = json.loads(contents)
     isVowel = adaline.predict(self.selectedCmaps)
@@ -1180,7 +1180,7 @@ class Form(Machine):
         if coords['x'] < x and x < coords['x2'] and coords['y'] < y and y < coords['y2']:
           self.redrawANNMap(coords['alpha'])
           self.resetANNOutput()
-          self.classifyPerceptron()
+          #self.classifyPerceptron()
           #self.classifyAdaline()
           #print(self.selectedCmaps)
           return
