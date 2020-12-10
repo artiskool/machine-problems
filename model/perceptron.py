@@ -9,7 +9,6 @@ class Perceptron(Neuron):
   def fit(self, X, y):
     X = self.add_bias(X)
     self.init_weights(X)
-    self.errors = []
     for epoch in range(self.iterations):
       total_errors = 0
       for xi, output in zip(X, y):
@@ -18,7 +17,6 @@ class Perceptron(Neuron):
         total_errors += int(update_value != 0.0)
       if total_errors == 0:
         break
-      self.errors.append(total_errors)
     return self.weights, epoch
 
   def net_input(self, X):
