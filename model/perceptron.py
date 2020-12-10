@@ -1,27 +1,20 @@
-import math
-from random import random, randrange
 from model import Neuron
 
 class Perceptron(Neuron):
   def fit(self, X, y):
-    self.weights = [random() for i in range(len(X[0])+1)] # include bias
-    for epoch in range(self.n_iterations):
-      totalError = 0
-      for i in range(len(X)):
-        xi = X[i]
-        expected_value = y[i]
-        error = expected_value - self.predict(xi)
-        totalError += error
-        self.weights[0] += self.learning_rate * error # update bias
-        #self.weights[0] = self.weights[0] + self.learning_rate * error # update bias
-        # update individual inputs
+    self.init_weights(X)
+    self.errors = []
+    for epoch in range(self.iterations):
+      total_errors = 0
+      for xi, output in zip(X, y):
+        to_update = self.learning_rate * (output - self.predict(xi))
         for i in range(len(xi)):
-          self.weights[i+1] += self.learning_rate * error * xi[i]
-          #self.weights[i+1] = self.weights[i+1] + self.learning_rate * error * xi[i]
-      if totalError == 0: # stop when totalError is 0
+          self.weights[i] += to_update * xi[i]
+        total_errors += 1 if to_update != 0.0 else 0
+      if total_errors == 0: # break if no more errors
         break
+      self.errors.append(total_errors)
     return self.weights, epoch
-
 
 
 """

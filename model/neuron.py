@@ -2,30 +2,35 @@ import math
 from random import random, randrange
 
 class Neuron(object):
-  def __init__(self, n_iterations=500, learning_rate=0.13):
-    self.n_iterations = n_iterations
+  def __init__(self, learning_rate = 0.01, iterations = 500):
     self.learning_rate = learning_rate
+    self.iterations = iterations
 
   def fit(self, X, y):
-    self.weights = [random() for i in range(len(X[0])+1)] # include bias
     epoch = 1
     return self.weights, epoch
 
+  def init_weights(self, X, include_bias=True):
+    X_len = len(X[0]) + 1 if include_bias else len(X[0])
+    self.weights = [random() for i in range(X_len)] # include bias
+    return self.weights
+  """
+  def init_weightss(self, X, include_bias=False):
+    random_gen = np.random.RandomState(1)
+    X_len = len(X[0]) + 1 if include_bias else len(X[0])
+    self.weights = random_gen.normal(loc = 0.0, scale = 0.01, size = X_len)
+    return self
+  """
   # sum of inputs times its weights
   def net_input(self, X):
-    weights = self.weights[1:]
-    total = 0
-    X = list(X)
-    for i in range(len(X)):
-      total += X[i] * weights[i]
-    return total + self.weights[0]
+    return self.dot(X, self.weights)
+
+  def predict(self, X):
+    return self.activation_function(X)
 
   # step function
   def activation_function(self, X):
     return 1 if self.net_input(X) >= 0.0 else 0
-
-  def predict(self, X):
-    return self.activation_function(X)
 
   def score(self, X, y):
     error_count = 0
@@ -59,7 +64,7 @@ class Neuron(object):
       y_test.append(datasetY.pop(index))
     return X_train, X_test, y_train, y_test
 
-  def dot(self, X, Y):
+  def dot(self, X, Y=None):
     """
     Linear algebra
     Dot product: product of two arrays
@@ -78,7 +83,11 @@ class Neuron(object):
         totals.append(total)
       return totals
     total = 0
-    Y = list(Y)
+    if Y is not None:
+      Y = list(Y)
     for i in range(len(X)):
-      total += X[i] * Y[i]
+      total += X[i] * (Y[i] if Y is not None else 1)
     return total
+
+  def transpose(self, X):
+    return list(map(list, zip(*X)))
