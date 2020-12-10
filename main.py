@@ -1031,13 +1031,13 @@ class Form(Machine):
   def resetANNOutput(self):
     self.canvas.itemconfig('classify', text='...')
 
-  def trainANN(self):
+  def trainPerceptron(self):
     self.summary.insert(END, '')
     contents = open('./data/dataset_perceptron.json').read(999999999)
     objects = json.loads(contents)
     X = [row[:-1] for row in objects]
     y = [row[-1] for row in objects]
-    perceptron = Perceptron()
+    perceptron = Perceptron(learning_rate = 0.1, iterations = 50)
     # Create training and test split
     X_train, X_test, y_train, y_test = perceptron.train_test_split(X, y)
     # Fit the model
@@ -1053,26 +1053,52 @@ class Form(Machine):
     self.summary.insert(END, 'Train Score: {}'.format(perceptron.score(X_train, y_train)))
     self.summary.insert(END, 'Test Score: {}'.format(perceptron.score(X_test, y_test)))
 
-  def classifyANN(self):
-    perceptron = Perceptron()
-    self.summary.insert(END, '')
+  def classifyPerceptron(self):
+    perceptron = Perceptron(learning_rate = 0.1, iterations = 50)
+    #self.summary.insert(END, '')
     contents = open('./data/weights_perceptron.json').read(999999999)
     perceptron.weights = json.loads(contents)
     isVowel = perceptron.predict(self.selectedCmaps[1:])
-    self.canvas.itemconfig('classify', text=('Vowel' if isVowel else 'Consonant'))
+    classification = ('Vowel' if isVowel else 'Consonant')
+    self.canvas.itemconfig('classify', text=classification)
+    self.summary.insert(END, "Perceptron: {} = {}".format(self.letter, classification))
 
   def trainAdaline(self):
-    ann = Adaline(self)
-    ann.train()
+    self.summary.insert(END, '')
+    contents = open('./data/dataset_adaline.json').read(999999999)
+    objects = json.loads(contents)
+    X = [row[:-1] for row in objects]
+    y = [row[-1] for row in objects]
+    adaline = Adaline(learning_rate = 0.001, iterations = 50)
+    # Create training and test split
+    X_train, X_test, y_train, y_test = adaline.train_test_split(X, y)
+    # Fit the model
+    weights, epoch = adaline.fit(X_train, y_train)
+    contents = json.dumps(weights, sort_keys=True, indent=4)
+    f = open('./data/weights_adaline.json', 'w')
+    f.write(contents)
+    f.close()
+    self.summary.insert(END, 'Epoch: {}'.format(epoch))
+    #weightStr = json.dumps(weights, sort_keys=True, indent=4)
+    self.summary.insert(END, 'Weights: {}'.format(weights))
+    # Score the model
+    self.summary.insert(END, 'Train Score: {}'.format(adaline.score(X_train, y_train)))
+    self.summary.insert(END, 'Test Score: {}'.format(adaline.score(X_test, y_test)))
 
   def classifyAdaline(self):
-    ann = Adaline(self)
-    isVowel = ann.classify()
-    self.canvas.itemconfig('classify', text=('Vowel' if isVowel else 'Consonant'))
+    adaline = Adaline(learning_rate = 0.001, iterations = 50)
+    #self.summary.insert(END, '')
+    contents = open('./data/weights_adaline.json').read(999999999)
+    adaline.weights = json.loads(contents)
+    isVowel = adaline.predict(self.selectedCmaps[1:])
+    classification = ('Vowel' if isVowel else 'Consonant')
+    self.canvas.itemconfig('classify', text=classification)
+    self.summary.insert(END, "Adaline: {} = {}".format(self.letter, classification))
 
   def redrawANNMap(self, char):
     if char not in self.ANNMaps:
       return
+    self.letter = char
     for index in range(1, len(self.selectedCmaps)):
       color = 'black' if index in self.ANNMaps[char] else 'white'
       textcolor = 'green' if index in self.ANNMaps[char] else 'red'
@@ -1136,8 +1162,8 @@ class Form(Machine):
     annmenu = Menu(self.menubar)
     annmenu.add_command(label='Load', command=self.loadJSONANN)
     annmenu.add_command(label='Reset Output', command=self.resetANNOutput)
-    annmenu.add_command(label='Train', command=self.trainANN)
-    annmenu.add_command(label='Classify', command=self.classifyANN)
+    annmenu.add_command(label='Train', command=self.trainPerceptron)
+    annmenu.add_command(label='Classify', command=self.classifyPerceptron)
     self.menubar.add_cascade(label='Perceptron', menu=annmenu)
     adamenu = Menu(self.menubar)
     adamenu.add_command(label='Load', command=self.loadJSONANN)
@@ -1154,6 +1180,8 @@ class Form(Machine):
         if coords['x'] < x and x < coords['x2'] and coords['y'] < y and y < coords['y2']:
           self.redrawANNMap(coords['alpha'])
           self.resetANNOutput()
+          self.classifyPerceptron()
+          #self.classifyAdaline()
           #print(self.selectedCmaps)
           return
       for coords in self.cmaps:
