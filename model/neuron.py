@@ -1,3 +1,4 @@
+import numpy as np
 import math
 from random import random, randrange
 
@@ -6,9 +7,12 @@ class Neuron(object):
     self.learning_rate = learning_rate
     self.iterations = iterations
 
-  def fit(self, X, y):
-    epoch = 1
-    return self.weights, epoch
+  def sanitize(self, X):
+    return np.array(X)
+
+  def add_bias(self, X):
+    bias = np.ones((X.shape[0], 1))
+    return np.hstack((bias, X))
 
   def init_weights(self, X, include_bias=True):
     X_len = len(X[0]) + 1 if include_bias else len(X[0])
@@ -27,6 +31,7 @@ class Neuron(object):
     return 1 if self.net_input(X) >= 0.0 else 0
 
   def score(self, X, y):
+    X = self.add_bias(X)
     error_count = 0
     for i in range(len(X)):
       xi = X[i]
@@ -56,7 +61,7 @@ class Neuron(object):
       index = randrange(len(datasetX)) # randomly pick the index
       X_test.append(datasetX.pop(index))
       y_test.append(datasetY.pop(index))
-    return X_train, X_test, y_train, y_test
+    return np.array(X_train), np.array(X_test), np.array(y_train), np.array(y_test)
 
   def dot(self, X, Y=None):
     """
@@ -68,7 +73,7 @@ class Neuron(object):
     np.dot(f, g)
     """
     X = list(X)
-    if type(X[0]) is list:
+    if type(X[0]) is list or type(X[0]) is np.ndarray:
       totals = []
       for i in range(len(X)):
         total = 0

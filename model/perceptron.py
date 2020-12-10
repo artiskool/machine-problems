@@ -1,20 +1,40 @@
 from model import Neuron
+import numpy as np
 
 class Perceptron(Neuron):
+  def __init__(self, learning_rate = 0.01, iterations = 100):
+    self.learning_rate = learning_rate
+    self.iterations = iterations
+
   def fit(self, X, y):
+    X = self.add_bias(X)
     self.init_weights(X)
     self.errors = []
     for epoch in range(self.iterations):
       total_errors = 0
       for xi, output in zip(X, y):
-        to_update = self.learning_rate * (output - self.predict(xi))
-        for i in range(len(xi)):
-          self.weights[i] += to_update * xi[i]
-        total_errors += 1 if to_update != 0.0 else 0
-      if total_errors == 0: # break if no more errors
+        update_value = self.learning_rate * (output - self.predict(xi))
+        self.weights += update_value * xi
+        total_errors += int(update_value != 0.0)
+      if total_errors == 0:
         break
       self.errors.append(total_errors)
     return self.weights, epoch
+
+  def net_input(self, X):
+    return np.dot(X, self.weights)
+
+  def predict(self, X):
+    return 1 if self.net_input(X) >= 0.0 else 0
+
+  def add_bias(self, X):
+    bias = np.ones((X.shape[0], 1))
+    return np.hstack((bias, X))
+
+  def init_weights(self, X):
+    random_gen = np.random.RandomState(1)
+    self.weights = random_gen.normal(loc = 0.0, scale = 0.01, size = X.shape[1])
+    return self
 
 
 """
