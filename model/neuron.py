@@ -14,13 +14,7 @@ class Neuron(object):
     X_len = len(X[0]) + 1 if include_bias else len(X[0])
     self.weights = [random() for i in range(X_len)] # include bias
     return self.weights
-  """
-  def init_weightss(self, X, include_bias=False):
-    random_gen = np.random.RandomState(1)
-    X_len = len(X[0]) + 1 if include_bias else len(X[0])
-    self.weights = random_gen.normal(loc = 0.0, scale = 0.01, size = X_len)
-    return self
-  """
+
   # sum of inputs times its weights
   def net_input(self, X):
     return self.dot(X, self.weights)
