@@ -176,6 +176,12 @@ class Form(Machine):
       'v': ['A', 'E', 'I', 'O', 'U'],
       'c': ['B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z']
     }
+    self.perceptron = Perceptron()
+    self.datasetPerceptronFile = None
+    self.weightsPerceptronFile = None
+    self.adaline = Adaline()
+    self.datasetAdalineFile = None
+    self.weightsAdalineFile = None
     self.loadJSONANN()
 
   def logSummary(self, log):
@@ -1031,9 +1037,36 @@ class Form(Machine):
   def resetANNOutput(self):
     self.canvas.itemconfig('classify', text='...')
 
+  def loadPerceptronDataset(self):
+    filename = filedialog.askopenfilename(initialdir='/', title='Select json file', filetypes=(('json files', '*.json'),('all files', '*.*')))
+    self.datasetPerceptronFile = filename
+    contents = open(self.datasetPerceptronFile).read(999999999)
+    dataset = json.loads(contents)
+    self.summary.insert(END, 'Load Perceptron Dataset')
+    self.summary.insert(END, dataset)
+
+  def loadPerceptronWeights(self):
+    filename = filedialog.askopenfilename(initialdir='/', title='Select json file', filetypes=(('json files', '*.json'),('all files', '*.*')))
+    self.weightsPerceptronFile = filename
+    contents = open(self.weightsPerceptronFile).read(999999999)
+    self.perceptron.weights = json.loads(contents)
+    self.summary.insert(END, 'Load Perceptron Weights')
+    self.summary.insert(END, self.perceptron.weights)
+
+  def savePerceptronWeights(self):
+    filename = filedialog.asksaveasfilename(initialdir='/', title='Select json file', filetypes=(('json files', '*.json'),('all files', '*.*')), initialfile='machine_problem_1', defaultextension='.json')
+    if len(filename) > 0:
+      contents = json.dumps(list(self.perceptron.weights), sort_keys=True, indent=4)
+      f = open(filename, 'w')
+      f.write(contents)
+      f.close()
+      self.summary.insert(END, 'Perceptron Weights saved to {}'.format(filename))
+
   def trainPerceptron(self):
+    if self.datasetPerceptronFile is None:
+      self.datasetPerceptronFile = './data/dataset_perceptron.json'
     self.summary.insert(END, 'Training Perceptron')
-    contents = open('./data/dataset_perceptron.json').read(999999999)
+    contents = open(self.datasetPerceptronFile).read(999999999)
     objects = json.loads(contents)
     X = [row[:-1] for row in objects]
     y = [row[-1] for row in objects]
@@ -1042,10 +1075,11 @@ class Form(Machine):
     X_train, X_test, y_train, y_test = perceptron.train_test_split(X, y)
     # Fit the model
     weights, epoch = perceptron.fit(X_train, y_train)
-    contents = json.dumps(list(weights), sort_keys=True, indent=4)
-    f = open('./data/weights_perceptron.json', 'w')
-    f.write(contents)
-    f.close()
+    self.perceptron = perceptron
+    #contents = json.dumps(list(weights), sort_keys=True, indent=4)
+    #f = open('./data/weights_perceptron.json', 'w')
+    #f.write(contents)
+    #f.close()
     self.summary.insert(END, 'Epoch: {}'.format(epoch))
     #weightStr = json.dumps(weights, sort_keys=True, indent=4)
     self.summary.insert(END, 'Weights: {}'.format(weights))
@@ -1054,9 +1088,11 @@ class Form(Machine):
     self.summary.insert(END, 'Test Score: {}'.format(perceptron.score(X_test, y_test)))
 
   def classifyPerceptron(self):
+    if self.weightsPerceptronFile is None:
+      self.weightsPerceptronFile = './data/weights_perceptron.json'
     perceptron = Perceptron()
     self.summary.insert(END, 'Predict Perceptron')
-    contents = open('./data/weights_perceptron.json').read(999999999)
+    contents = open(self.weightsPerceptronFile).read(999999999)
     perceptron.weights = json.loads(contents)
     isVowel = perceptron.predict(self.selectedCmaps)
     classification = ('Vowel' if isVowel else 'Consonant')
@@ -1065,7 +1101,7 @@ class Form(Machine):
 
   def trainAdaline(self):
     self.summary.insert(END, 'Train Adaline')
-    contents = open('./data/dataset_adaline.json').read(999999999)
+    contents = open(self.datasetAdalineFile).read(999999999)
     objects = json.loads(contents)
     X = [row[:-1] for row in objects]
     y = [row[-1] for row in objects]
@@ -1074,10 +1110,11 @@ class Form(Machine):
     X_train, X_test, y_train, y_test = adaline.train_test_split(X, y)
     # Fit the model
     weights, epoch = adaline.fit(X_train, y_train)
-    contents = json.dumps(list(weights), sort_keys=True, indent=4)
-    f = open('./data/weights_adaline.json', 'w')
-    f.write(contents)
-    f.close()
+    self.adaline = adaline
+    #contents = json.dumps(list(weights), sort_keys=True, indent=4)
+    #f = open('./data/weights_adaline.json', 'w')
+    #f.write(contents)
+    #f.close()
     self.summary.insert(END, 'Epoch: {}'.format(epoch))
     #weightStr = json.dumps(weights, sort_keys=True, indent=4)
     self.summary.insert(END, 'Weights: {}'.format(weights))
@@ -1086,14 +1123,41 @@ class Form(Machine):
     self.summary.insert(END, 'Test Score: {}'.format(adaline.score(X_test, y_test)))
 
   def classifyAdaline(self):
+    if self.weightsAdalineFile is None:
+      self.weightsAdalineFile = './data/weights_adaline.json'
     adaline = Adaline(learning_rate = 0.001)
     self.summary.insert(END, 'Predict Adaline')
-    contents = open('./data/weights_adaline.json').read(999999999)
+    contents = open(self.weightsAdalineFile).read(999999999)
     adaline.weights = json.loads(contents)
     isVowel = adaline.predict(self.selectedCmaps)
     classification = ('Vowel' if isVowel else 'Consonant')
     self.canvas.itemconfig('classify', text=classification)
     self.summary.insert(END, "Adaline: {} = {}".format(self.letter, classification))
+
+  def loadAdalineDataset(self):
+    filename = filedialog.askopenfilename(initialdir='/', title='Select json file', filetypes=(('json files', '*.json'),('all files', '*.*')))
+    self.datasetAdalineFile = filename
+    contents = open(self.datasetAdalineFile).read(999999999)
+    dataset = json.loads(contents)
+    self.summary.insert(END, 'Load Adaline Dataset')
+    self.summary.insert(END, dataset)
+
+  def loadAdalineWeights(self):
+    filename = filedialog.askopenfilename(initialdir='/', title='Select json file', filetypes=(('json files', '*.json'),('all files', '*.*')))
+    self.weightsAdalineFile = filename
+    contents = open(self.weightsAdalineFile).read(999999999)
+    self.adaline.weights = json.loads(contents)
+    self.summary.insert(END, 'Load Adaline Weights')
+    self.summary.insert(END, self.adaline.weights)
+
+  def saveAdalineWeights(self):
+    filename = filedialog.asksaveasfilename(initialdir='/', title='Select json file', filetypes=(('json files', '*.json'),('all files', '*.*')), initialfile='machine_problem_1', defaultextension='.json')
+    if len(filename) > 0:
+      contents = json.dumps(list(self.adaline.weights), sort_keys=True, indent=4)
+      f = open(filename, 'w')
+      f.write(contents)
+      f.close()
+      self.summary.insert(END, 'Adaline Weights saved to {}'.format(filename))
 
   def redrawANNMap(self, char):
     if char not in self.ANNMaps:
@@ -1160,13 +1224,19 @@ class Form(Machine):
     mapmenu.add_cascade(label='Run', menu=maprunmenu)
     self.menubar.add_cascade(label='Map Coloring', menu=mapmenu)
     annmenu = Menu(self.menubar)
-    annmenu.add_command(label='Load', command=self.loadJSONANN)
+    annmenu.add_command(label='Draw Board', command=self.loadJSONANN)
+    annmenu.add_command(label='Load Dataset', command=self.loadPerceptronDataset)
+    annmenu.add_command(label='Load Weights', command=self.loadPerceptronWeights)
+    annmenu.add_command(label='Save Weights', command=self.savePerceptronWeights)
     annmenu.add_command(label='Reset Output', command=self.resetANNOutput)
     annmenu.add_command(label='Train', command=self.trainPerceptron)
     annmenu.add_command(label='Classify', command=self.classifyPerceptron)
     self.menubar.add_cascade(label='Perceptron', menu=annmenu)
     adamenu = Menu(self.menubar)
-    adamenu.add_command(label='Load', command=self.loadJSONANN)
+    adamenu.add_command(label='Draw Board', command=self.loadJSONANN)
+    adamenu.add_command(label='Load Dataset', command=self.loadAdalineDataset)
+    adamenu.add_command(label='Load Weights', command=self.loadAdalineWeights)
+    adamenu.add_command(label='Save Weights', command=self.saveAdalineWeights)
     adamenu.add_command(label='Reset Output', command=self.resetANNOutput)
     adamenu.add_command(label='Train', command=self.trainAdaline)
     adamenu.add_command(label='Classify', command=self.classifyAdaline)
