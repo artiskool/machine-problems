@@ -914,7 +914,7 @@ class Form(Machine):
         self.canvas.itemconfig('node{}'.format(k), fill="yellow")
         self.canvas.itemconfig('edge{}'.format(self.matrix[k][j]['edge']), fill="yellow")
         self.tk.update()
-        sleep(0.3) # TODO: to speed up, comment this out
+        #sleep(0.3) # TODO: to speed up, comment this out
         weightPath += graph[k][j]
         k = j
       j = vertex
@@ -931,15 +931,15 @@ class Form(Machine):
         minPath = weightPath
         minPaths = paths
       #print('REVERTING')
-      sleep(2)
+      #sleep(2)
       for item in colorChanges:
         k = item[0]
         j = item[1]
         self.canvas.itemconfig('node{}'.format(k), fill="red")
         self.canvas.itemconfig('edge{}'.format(self.matrix[k][j]['edge']), fill="black")
         self.tk.update()
-    print("minPaths")
-    print(minPaths)
+    #print("minPaths")
+    #print(minPaths)
     if len(minPaths) > 0:
       for path in minPaths:
         row = path[0]
@@ -975,7 +975,7 @@ class Form(Machine):
     print(graph)
     self.vertices = len(graph)
     min_path = self.travellingSalesmanProblem(graph, 0)
-    print(min_path)
+    print('MIN PATH: ', min_path)
 
   def loadMap(self):
     self.loadMapImage()

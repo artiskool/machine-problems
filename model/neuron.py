@@ -24,6 +24,9 @@ class Neuron(object):
     return np.dot(X, self.weights)
     return self.dot(X, self.weights)
 
+  def predict(self, X):
+    return self.activation_function(X)
+
   def score(self, X, y):
     X = self.add_bias(X)
     error_count = 0

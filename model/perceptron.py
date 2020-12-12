@@ -15,9 +15,6 @@ class Perceptron(Neuron):
         break
     return self.weights, epoch
 
-  def predict(self, X):
-    return self.activation_function(X)
-
   # step function
   def activation_function(self, X):
     return 1 if self.net_input(X) >= 0.0 else 0
